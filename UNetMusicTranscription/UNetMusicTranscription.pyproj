@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>dd7ba320-ea2a-467f-9f26-17ea25329b5a</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>UNetMusicTranscription.py</StartupFile>
+    <StartupFile>src\UNetMusicTranscription.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -21,7 +21,21 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="UNetMusicTranscription.py" />
+    <Compile Include="src\unet\layers.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="src\UNetMusicTranscription.py" />
+    <Compile Include="src\unet\Unet.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="src\unet\__init__.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="src\__init__.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="src\" />
+    <Folder Include="src\unet\" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
