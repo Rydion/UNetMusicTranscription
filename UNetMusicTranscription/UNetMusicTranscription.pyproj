@@ -21,7 +21,16 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="src\tf_unet\image_gen.py" />
+    <Compile Include="src\tf_unet\image_util.py" />
+    <Compile Include="src\tf_unet\layers.py" />
+    <Compile Include="src\tf_unet\unet.py" />
+    <Compile Include="src\tf_unet\util.py" />
+    <Compile Include="src\tf_unet\__init__.py" />
     <Compile Include="src\UNetMusicTranscription.py" />
+    <Compile Include="src\unet\Trainer.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="src\unet\Unet.py">
       <SubType>Code</SubType>
     </Compile>
@@ -32,6 +41,7 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="src\" />
+    <Folder Include="src\tf_unet\" />
     <Folder Include="src\unet\" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />

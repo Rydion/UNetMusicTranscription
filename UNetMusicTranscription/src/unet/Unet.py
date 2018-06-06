@@ -46,20 +46,44 @@ class Unet:
         x1Crop = tf.slice(x1, offsets, size)
         return tf.concat([x1Crop, x2], 3)
 
-    def __init__(self, numChannels = 3, numClasses = 2, **kwargs):
+    @staticmethod
+    def pixelWiseSoftmax(outputMap):
+        exponentialMap = tf.exp(outputMap)
+        sumExp = tf.reduce_sum(exponentialMap, 3, keepdims = True)
+        tensorSumExp = tf.tile(sumExp, tf.stack([1, 1, 1, tf.shape(outputMap)[3]]))
+        return tf.div(exponentialMap, tensorSumExp)
+
+    @staticmethod
+    def calcCrossEntropy(y, outputMap):
+        return -tf.reduce_mean(y*tf.log(tf.clip_by_value(outputMap, 1e-10, 1.0)), name = 'cross_entropy')
+
+    def __init__(self, numChannels = 3, numClasses = 2, cost = 'cross_entropy', costKwargs = {},  **kwargs):
         self._numChannels = numChannels
         self._numClasses = numClasses
         
-        self._x = tf.placeholder('float', shape = [None, None, None, self._numChannels])
-        self._y = tf.placeholder('float', shape = [None, None, None, self._numClasses])
-        self._keepProb = tf.placeholder(tf.float32)
+        self.x = tf.placeholder('float', shape = [None, None, None, self._numChannels])
+        self.y = tf.placeholder('float', shape = [None, None, None, self._numClasses])
+        self.keepProb = tf.placeholder(tf.float32)
         
         logits, self._variables, self._offset = self._initUnet(**kwargs)
 
+        self.cost = self._getCost(logits, cost, costKwargs)
+        self.gradientsNode = tf.gradients(self.cost, self._variables)
+        self.crossEntropy = tf.reduce_mean(Unet.calcCrossEntropy(tf.reshape(self.y, [-1, self._numClasses]), tf.reshape(Unet.pixelWiseSoftmax(logits), [-1, self._numClasses])))
+
+        self.predicter = Unet.pixelWiseSoftmax(logits)
+        self._correctPred = tf.equal(tf.argmax(self.predicter, 3), tf.argmax(self.y, 3))
+        self.accuracy = tf.reduce_mean(tf.cast(self._correctPred, tf.float32))
+
+    def save(self, sess, model_path):
+        saver = tf.train.Saver()
+        savePath = saver.save(sess, model_path)
+        return savePath
+
     def _initUnet(self, layers = 3, featuresRoot = 16, filterSize = 3, poolSize = 2):
-        nx = tf.shape(self._x)[1]
-        ny = tf.shape(self._x)[2]
-        input = tf.reshape(self._x, tf.stack([-1, nx, ny, self._numChannels]))
+        nx = tf.shape(self.x)[1]
+        ny = tf.shape(self.x)[2]
+        input = tf.reshape(self.x, tf.stack([-1, nx, ny, self._numChannels]))
         batchSize = tf.shape(input)[0]
  
         weights = []
@@ -85,9 +109,9 @@ class Unet:
             b1 = Unet.bias([features])
             b2 = Unet.bias([features])
         
-            conv1 = Unet.conv2d(input, w1, self._keepProb)
+            conv1 = Unet.conv2d(input, w1, self.keepProb)
             tmpHConv = tf.nn.relu(conv1 + b1)
-            conv2 = Unet.conv2d(tmpHConv, w2, self._keepProb)
+            conv2 = Unet.conv2d(tmpHConv, w2, self.keepProb)
             downHConvs[layer] = tf.nn.relu(conv2 + b2)
         
             weights.append((w1, w2))
@@ -118,9 +142,9 @@ class Unet:
             b1 = Unet.bias([features//2])
             b2 = Unet.bias([features//2])
         
-            conv1 = Unet.conv2d(hDeconvConcat, w1, self._keepProb)
+            conv1 = Unet.conv2d(hDeconvConcat, w1, self.keepProb)
             hConv = tf.nn.relu(conv1 + b1)
-            conv2 = Unet.conv2d(hConv, w2, self._keepProb)
+            conv2 = Unet.conv2d(hConv, w2, self.keepProb)
             input = tf.nn.relu(conv2 + b2)
             upHConvs[layer] = input
 
@@ -149,10 +173,61 @@ class Unet:
 
         return outputMap, variables, int(inSize - size)
 
+    def _getCost(self, logits, costName, costKwargs):
+        """
+        Constructs the cost function, either cross_entropy, weighted cross_entropy or dice_coefficient.
+        Optional arguments are:
+        class_weights: weights for the different classes in case of multi-class imbalance
+        regularizer: power of the L2 regularizers added to the loss function
+        """
+
+        flat_logits = tf.reshape(logits, [-1, self._numClasses])
+        flat_labels = tf.reshape(self.y, [-1, self._numClasses])
+        if costName == "cross_entropy":
+            class_weights = costKwargs.pop("class_weights", None)
+
+            if class_weights is not None:
+                class_weights = tf.constant(np.array(class_weights, dtype=np.float32))
+
+                weight_map = tf.multiply(flat_labels, class_weights)
+                weight_map = tf.reduce_sum(weight_map, axis=1)
+
+                loss_map = tf.nn.softmax_cross_entropy_with_logits_v2(logits=flat_logits,
+                                                                      labels=flat_labels)
+                weighted_loss = tf.multiply(loss_map, weight_map)
+
+                loss = tf.reduce_mean(weighted_loss)
+
+            else:
+                loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=flat_logits,
+                                                                                 labels=flat_labels))
+        elif costName == "dice_coefficient":
+            eps = 1e-5
+            prediction = pixel_wise_softmax_2(logits)
+            intersection = tf.reduce_sum(prediction * self.y)
+            union = eps + tf.reduce_sum(prediction) + tf.reduce_sum(self.y)
+            loss = -(2 * intersection / (union))
+
+        else:
+            raise ValueError("Unknown cost function: " % costName)
+
+        regularizer = costKwargs.pop("regularizer", None)
+        if regularizer is not None:
+            regularizers = sum([tf.nn.l2_loss(variable) for variable in self.variables])
+            loss += (regularizer * regularizers)
+
+        return loss
+
+    x = None
+    y = None
+    keepProb = 0
+    cost = 0
+    crossEntropy = 0
+    gradientsNode = None
+
+    predicter = None
+    _correctPred = 0
     _numChannels = 0
     _numClasses = 0
-    _x = None
-    _y = None
-    _keepProb = None
     _variables = None
     _offset = 0
