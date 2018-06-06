@@ -21,9 +21,6 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="src\unet\layers.py">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="src\UNetMusicTranscription.py" />
     <Compile Include="src\unet\Unet.py">
       <SubType>Code</SubType>

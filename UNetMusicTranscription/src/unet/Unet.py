@@ -19,7 +19,7 @@ class Unet:
         return tf.Variable(tf.truncated_normal(shape, stddev = stddev))
 
     @staticmethod
-    def weightDevonc(shape, stddev = 0.1):
+    def weightDeconv(shape, stddev = 0.1):
         return tf.Variable(tf.truncated_normal(shape, stddev = stddev))
 
     @staticmethod
@@ -30,8 +30,8 @@ class Unet:
     @staticmethod
     def deconv2d(x, W, stride):
         xShape = tf.shape(x)
-        output_shape = tf.stack([xShape[0], xShape[1]*2, xShape[2]*2, xShape[3]//2])
-        return tf.nn.conv2d_transpose(x, W, output_shape, strides = [1, stride, stride, 1], padding = 'VALID')
+        outputShape = tf.stack([xShape[0], xShape[1]*2, xShape[2]*2, xShape[3]//2])
+        return tf.nn.conv2d_transpose(x, W, outputShape, strides = [1, stride, stride, 1], padding = 'VALID')
 
     @staticmethod
     def maxPool(x, n):
@@ -43,77 +43,86 @@ class Unet:
         x2Shape = tf.shape(x2)
         offsets = [0, (x1Shape[1] - x2Shape[1])//2, (x1Shape[2] - x2Shape[2])//2, 0]
         size = [-1, x2Shape[1], x2Shape[2], -1]
-        x1_crop = tf.slice(x1, offsets, size)
-        return tf.concat([x1_crop, x2], 3)
+        x1Crop = tf.slice(x1, offsets, size)
+        return tf.concat([x1Crop, x2], 3)
 
-    @staticmethod
-    def _initUnet(x, numChannels, numClasses, keepProb, layers = 3, features_root = 16, filter_size = 3, pool_size = 2):
-        nx = tf.shape(x)[1]
-        ny = tf.shape(x)[2]
-        x_image = tf.reshape(x, tf.stack([-1, nx, ny, numChannels]))
-        in_node = x_image
-        batch_size = tf.shape(x_image)[0]
+    def __init__(self, numChannels = 3, numClasses = 2, **kwargs):
+        self._numChannels = numChannels
+        self._numClasses = numClasses
+        
+        self._x = tf.placeholder('float', shape = [None, None, None, self._numChannels])
+        self._y = tf.placeholder('float', shape = [None, None, None, self._numClasses])
+        self._keepProb = tf.placeholder(tf.float32)
+        
+        logits, self._variables, self._offset = self._initUnet(**kwargs)
+
+    def _initUnet(self, layers = 3, featuresRoot = 16, filterSize = 3, poolSize = 2):
+        nx = tf.shape(self._x)[1]
+        ny = tf.shape(self._x)[2]
+        input = tf.reshape(self._x, tf.stack([-1, nx, ny, self._numChannels]))
+        batchSize = tf.shape(input)[0]
  
         weights = []
         biases = []
         convs = []
         pools = OrderedDict()
         deconv = OrderedDict()
-        dw_h_convs = OrderedDict()
-        up_h_convs = OrderedDict()
+        downHConvs = OrderedDict()
+        upHConvs = OrderedDict()
     
-        in_size = 1000
-        size = in_size
+        # down layers
+        inSize = 1000
+        size = inSize
         for layer in range(0, layers):
-            features = 2**layer*features_root
-            stddev = np.sqrt(2/(filter_size**2*features))
+            features = 2**layer*featuresRoot
+            stddev = np.sqrt(2/(filterSize**2*features))
             if layer == 0:
-                w1 = Unet.weight([filter_size, filter_size, numChannels, features], stddev)
+                w1 = Unet.weight([filterSize, filterSize, self._numChannels, features], stddev)
             else:
-                w1 = Unet.weight([filter_size, filter_size, features//2, features], stddev)
+                w1 = Unet.weight([filterSize, filterSize, features//2, features], stddev)
             
-            w2 = Unet.weight([filter_size, filter_size, features, features], stddev)
+            w2 = Unet.weight([filterSize, filterSize, features, features], stddev)
             b1 = Unet.bias([features])
             b2 = Unet.bias([features])
         
-            conv1 = Unet.conv2d(in_node, w1, keepProb)
-            tmp_h_conv = tf.nn.relu(conv1 + b1)
-            conv2 = Unet.conv2d(tmp_h_conv, w2, keepProb)
-            dw_h_convs[layer] = tf.nn.relu(conv2 + b2)
+            conv1 = Unet.conv2d(input, w1, self._keepProb)
+            tmpHConv = tf.nn.relu(conv1 + b1)
+            conv2 = Unet.conv2d(tmpHConv, w2, self._keepProb)
+            downHConvs[layer] = tf.nn.relu(conv2 + b2)
         
             weights.append((w1, w2))
             biases.append((b1, b2))
             convs.append((conv1, conv2))
         
             size -= 4
-            if layer < layers-1:
-                pools[layer] = Unet.maxPool(dw_h_convs[layer], pool_size)
-                in_node = pools[layer]
+            if layer < layers - 1:
+                pools[layer] = Unet.maxPool(downHConvs[layer], poolSize)
+                input = pools[layer]
                 size /= 2
         
-        in_node = dw_h_convs[layers-1]
+        input = downHConvs[layers - 1]
         
         # up layers
-        for layer in range(layers-2, -1, -1):
-            features = 2**(layer+1)*features_root
-            stddev = np.sqrt(2/(filter_size**2*features))
+        for layer in range(layers - 2, -1, -1):
+            features = 2**(layer + 1)*featuresRoot
+            stddev = np.sqrt(2/(filterSize**2*features))
         
-            wd = Unet.weightDevonc([pool_size, pool_size, features//2, features], stddev)
+            wd = Unet.weightDeconv([poolSize, poolSize, features//2, features], stddev)
             bd = Unet.bias([features//2])
-            h_deconv = tf.nn.relu(Unet.deconv2d(in_node, wd, pool_size) + bd)
-            h_deconv_concat = Unet.cropAndConcat(dw_h_convs[layer], h_deconv)
-            deconv[layer] = h_deconv_concat
+            hDeconv = tf.nn.relu(Unet.deconv2d(input, wd, poolSize) + bd)
+            hDeconvConcat = Unet.cropAndConcat(downHConvs[layer], hDeconv)
+            deconv[layer] = hDeconvConcat
         
-            w1 = Unet.weight([filter_size, filter_size, features, features//2], stddev)
-            w2 = Unet.weight([filter_size, filter_size, features//2, features//2], stddev)
+            w1 = Unet.weight([filterSize, filterSize, features, features//2], stddev)
+            w2 = Unet.weight([filterSize, filterSize, features//2, features//2], stddev)
             b1 = Unet.bias([features//2])
             b2 = Unet.bias([features//2])
         
-            conv1 = Unet.conv2d(h_deconv_concat, w1, keepProb)
-            h_conv = tf.nn.relu(conv1 + b1)
-            conv2 = Unet.conv2d(h_conv, w2, keepProb)
-            in_node = tf.nn.relu(conv2 + b2)
-            up_h_convs[layer] = in_node
+            conv1 = Unet.conv2d(hDeconvConcat, w1, self._keepProb)
+            hConv = tf.nn.relu(conv1 + b1)
+            conv2 = Unet.conv2d(hConv, w2, self._keepProb)
+            input = tf.nn.relu(conv2 + b2)
+            upHConvs[layer] = input
 
             weights.append((w1, w2))
             biases.append((b1, b2))
@@ -123,11 +132,11 @@ class Unet:
             size -= 4
 
         # Output Map
-        weight = Unet.weight([1, 1, features_root, numClasses], stddev)
-        bias = Unet.bias([numClasses])
-        conv = Unet.conv2d(in_node, weight, tf.constant(1.0))
-        output_map = tf.nn.relu(conv + bias)
-        up_h_convs['out'] = output_map
+        weight = Unet.weight([1, 1, featuresRoot, self._numClasses], stddev)
+        bias = Unet.bias([self._numClasses])
+        conv = Unet.conv2d(input, weight, tf.constant(1.0))
+        outputMap = tf.nn.relu(conv + bias)
+        upHConvs['out'] = outputMap
             
         variables = []
         for w1, w2 in weights:
@@ -138,19 +147,7 @@ class Unet:
             variables.append(b1)
             variables.append(b2)
 
-        return output_map, variables, int(in_size - size)
-
-
-    def __init__(self, numChannels = 3, numClasses = 2, **kwargs):
-        self._numChannels = numChannels
-        self._numClasses = numClasses
-        
-        self._x = tf.placeholder('float', shape = [None, None, None, self._numChannels])
-        self._y = tf.placeholder('float', shape = [None, None, None, self._numClasses])
-        self._keepProb = tf.placeholder(tf.float32)
-        
-        logits, self._variables, self._offset = Unet._initUnet(self._x, self._numChannels, self._numClasses, self._keepProb, **kwargs)
-
+        return outputMap, variables, int(inSize - size)
 
     _numChannels = 0
     _numClasses = 0
