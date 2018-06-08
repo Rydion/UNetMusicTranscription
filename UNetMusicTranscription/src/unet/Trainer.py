@@ -3,13 +3,15 @@ Created on 2018-06-06
 author: Adrian Hintze @Rydion
 '''
 
+from __future__ import print_function, division, absolute_import, unicode_literals
+
 import os
 import logging
 import shutil
 import numpy as np
 import tensorflow as tf
 
-from tf_unet import util
+from unet import util
 
 class Trainer(object):
     """
@@ -23,7 +25,7 @@ class Trainer(object):
 
     """
 
-    verification_batch_size = 4
+    verificationBatchSize = 4
 
     def __init__(self, net, batch_size = 1, norm_grads = False, optimizer = 'momentum', optKwargs = {}):
         self.net = net
@@ -33,10 +35,10 @@ class Trainer(object):
         self.optKwargs = optKwargs
 
     def _get_optimizer(self, training_iters, global_step):
-        if self.optimizer == "momentum":
-            learning_rate = self.optKwargs.pop("learning_rate", 0.2)
-            decay_rate = self.optKwargs.pop("decay_rate", 0.95)
-            momentum = self.optKwargs.pop("momentum", 0.2)
+        if self.optimizer == 'momentum':
+            learning_rate = self.optKwargs.pop('learning_rate', 0.2)
+            decay_rate = self.optKwargs.pop('decay_rate', 0.95)
+            momentum = self.optKwargs.pop('momentum', 0.2)
 
             self.learning_rate_node = tf.train.exponential_decay(
                 learning_rate = learning_rate,
@@ -55,13 +57,18 @@ class Trainer(object):
                 self.net.cost,
                 global_step = global_step
             )
-        elif self.optimizer == "adam":
-            learning_rate = self.optKwargs.pop("learning_rate", 0.001)
+        elif self.optimizer == 'adam':
+            learning_rate = self.optKwargs.pop('learning_rate', 0.001)
             self.learning_rate_node = tf.Variable(learning_rate)
 
-            optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate_node,
-                                               **self.optKwargs).minimize(self.net.cost,
-                                                                           global_step=global_step)
+            optimizer = tf.train.AdamOptimizer(
+                learning_rate = self.learning_rate_node,
+                **self.optKwargs
+            ) \
+            .minimize(
+                self.net.cost,
+                global_step = global_step
+            )
 
         return optimizer
 
@@ -132,7 +139,7 @@ class Trainer(object):
                 if ckpt and ckpt.model_checkpoint_path:
                     self.net.restore(sess, ckpt.model_checkpoint_path)
 
-            test_x, test_y = data_provider(self.verification_batch_size)
+            test_x, test_y = data_provider(self.verificationBatchSize)
             pred_shape = self.store_prediction(sess, test_x, test_y, "_init")
 
             summary_writer = tf.summary.FileWriter(output_path, graph=sess.graph)
@@ -149,14 +156,14 @@ class Trainer(object):
                         (self.optimizer, self.net.cost, self.learning_rate_node, self.net.gradientsNode),
                         feed_dict = {
                             self.net.x: batch_x,
-                            self.net.y: util.crop_to_shape(batch_y, pred_shape),
+                            self.net.y: util.cropToShape(batch_y, pred_shape),
                             self.net.keepProb: dropout
                         }
                     )
 
                     if step % display_step == 0:
                         self.output_minibatch_stats(sess, summary_writer, step, batch_x,
-                                                    util.crop_to_shape(batch_y, pred_shape))
+                                                    util.cropToShape(batch_y, pred_shape))
 
                     total_loss += loss
 
@@ -183,18 +190,18 @@ class Trainer(object):
             self.net.cost,
             feed_dict = {
                 self.net.x: batch_x,
-                self.net.y: util.crop_to_shape(batch_y, pred_shape),
+                self.net.y: util.cropToShape(batch_y, pred_shape),
                 self.net.keepProb: 1.
             }
         )
 
         logging.info("Verification error= {:.1f}%, loss= {:.4f}".format(error_rate(prediction,
-                                                                                   util.crop_to_shape(batch_y,
+                                                                                   util.cropToShape(batch_y,
                                                                                                       prediction.shape)),
                                                                         loss))
 
-        img = util.combine_img_prediction(batch_x, batch_y, prediction)
-        util.save_image(img, "%s/%s.jpg" % (self.prediction_path, name))
+        img = util.combineImgPrediction(batch_x, batch_y, prediction)
+        util.saveImage(img, "%s/%s.jpg" % (self.prediction_path, name))
 
         return pred_shape
 
@@ -263,4 +270,3 @@ def get_image_summary(img, idx=0):
     V = tf.transpose(V, (2, 0, 1))
     V = tf.reshape(V, tf.stack((-1, img_w, img_h, 1)))
     return V
-

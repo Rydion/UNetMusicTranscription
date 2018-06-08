@@ -3,6 +3,8 @@ created on 2018-05-31
 author: Adrian Hintze @Rydion
 '''
 
+from __future__ import print_function, division, absolute_import, unicode_literals
+
 import numpy as np
 import tensorflow as tf
 
@@ -75,9 +77,9 @@ class Unet:
         self._correctPred = tf.equal(tf.argmax(self.predicter, 3), tf.argmax(self.y, 3))
         self.accuracy = tf.reduce_mean(tf.cast(self._correctPred, tf.float32))
 
-    def save(self, sess, model_path):
+    def save(self, sess, modelPath):
         saver = tf.train.Saver()
-        savePath = saver.save(sess, model_path)
+        savePath = saver.save(sess, modelPath)
         return savePath
 
     def _initUnet(self, layers = 3, featuresRoot = 16, filterSize = 3, poolSize = 2):
@@ -181,42 +183,49 @@ class Unet:
         regularizer: power of the L2 regularizers added to the loss function
         """
 
-        flat_logits = tf.reshape(logits, [-1, self._numClasses])
-        flat_labels = tf.reshape(self.y, [-1, self._numClasses])
-        if costName == "cross_entropy":
-            class_weights = costKwargs.pop("class_weights", None)
+        flatLogits = tf.reshape(logits, [-1, self._numClasses])
+        flatLabels = tf.reshape(self.y, [-1, self._numClasses])
+        if costName == 'cross_entropy':
+            classWeights = costKwargs.pop('class_weights', None)
 
-            if class_weights is not None:
-                class_weights = tf.constant(np.array(class_weights, dtype=np.float32))
+            if classWeights is not None:
+                classWeights = tf.constant(np.array(classWeights, dtype = np.float32))
 
-                weight_map = tf.multiply(flat_labels, class_weights)
-                weight_map = tf.reduce_sum(weight_map, axis=1)
+                weightMap = tf.multiply(flatLabels, classWeights)
+                weightMap = tf.reduce_sum(weightMap, axis = 1)
 
-                loss_map = tf.nn.softmax_cross_entropy_with_logits_v2(logits=flat_logits,
-                                                                      labels=flat_labels)
-                weighted_loss = tf.multiply(loss_map, weight_map)
+                lossMap = tf.nn.softmax_cross_entropy_with_logits_v2(
+                    logits = flatLogits,
+                    labels = flatLabels
+                )
+                weightedLoss = tf.multiply(lossMap, weightMap)
 
-                loss = tf.reduce_mean(weighted_loss)
+                loss = tf.reduce_mean(weightedLoss)
 
             else:
-                loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=flat_logits,
-                                                                                 labels=flat_labels))
-        elif costName == "dice_coefficient":
+                loss = tf.reduce_mean(
+                    tf.nn.softmax_cross_entropy_with_logits_v2(
+                        logits = flatLogits,
+                        labels = flatLabels
+                    )
+                )
+        elif costName == 'dice_coefficient':
             eps = 1e-5
-            prediction = pixel_wise_softmax_2(logits)
+            prediction = Unet.pixelWiseSoftmax(logits)
             intersection = tf.reduce_sum(prediction * self.y)
             union = eps + tf.reduce_sum(prediction) + tf.reduce_sum(self.y)
-            loss = -(2 * intersection / (union))
+            loss = -(2*intersection/(union))
 
         else:
-            raise ValueError("Unknown cost function: " % costName)
+            raise ValueError('Unknown cost function: ' % costName)
 
-        regularizer = costKwargs.pop("regularizer", None)
+        regularizer = costKwargs.pop('regularizer', None)
         if regularizer is not None:
             regularizers = sum([tf.nn.l2_loss(variable) for variable in self.variables])
-            loss += (regularizer * regularizers)
+            loss += regularizer*regularizers
 
         return loss
+
 
     x = None
     y = None
@@ -224,8 +233,8 @@ class Unet:
     cost = 0
     crossEntropy = 0
     gradientsNode = None
-
     predicter = None
+
     _correctPred = 0
     _numChannels = 0
     _numClasses = 0
