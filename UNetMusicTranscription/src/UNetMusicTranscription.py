@@ -23,7 +23,7 @@ def test():
     ny = nx
 
     generator = image_gen.GrayScaleDataProvider(nx, ny, cnt = 20)
-    net = Unet(num_channels = generator.channels, num_classes = generator.n_class, layers = 3, featuresRoot = 16)
+    net = Unet(num_channels = generator.channels, num_classes = generator.n_class, layers = 3, features_root = 16)
     trainer = Trainer(net, opt_kwargs = dict(momentum = 0.2))
     path = trainer.train(generator, './unet_trained', epochs = 1)
 

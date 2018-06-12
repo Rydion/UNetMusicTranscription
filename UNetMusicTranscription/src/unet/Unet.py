@@ -21,7 +21,7 @@ class Unet:
         return tf.Variable(tf.truncated_normal(shape, stddev = stddev))
 
     @staticmethod
-    def weightDeconv(shape, stddev = 0.1):
+    def weight_deconv(shape, stddev = 0.1):
         return tf.Variable(tf.truncated_normal(shape, stddev = stddev))
 
     @staticmethod
@@ -36,7 +36,7 @@ class Unet:
         return tf.nn.conv2d_transpose(x, W, output_shape, strides = [1, stride, stride, 1], padding = 'VALID')
 
     @staticmethod
-    def maxPool(x, n):
+    def max_pool(x, n):
         return tf.nn.max_pool(x, ksize = [1, n, n, 1], strides = [1, n, n, 1], padding = 'VALID')
 
     @staticmethod
@@ -67,7 +67,7 @@ class Unet:
         self.y = tf.placeholder('float', shape = [None, None, None, self._num_classes])
         self.keep_prob = tf.placeholder(tf.float32)
         
-        logits, self._variables, self._offset = self._initUnet(**kwargs)
+        logits, self._variables, self._offset = self._init_unet(**kwargs)
 
         self.cost = self._getCost(logits, cost, cost_kwargs)
         self.gradients_node = tf.gradients(self.cost, self._variables)
@@ -77,44 +77,44 @@ class Unet:
         self._correct_pred = tf.equal(tf.argmax(self.predicter, 3), tf.argmax(self.y, 3))
         self.accuracy = tf.reduce_mean(tf.cast(self._correct_pred, tf.float32))
 
-    def save(self, sess, modelPath):
+    def save(self, sess, model_path):
         saver = tf.train.Saver()
-        savePath = saver.save(sess, modelPath)
-        return savePath
+        save_path = saver.save(sess, model_path)
+        return save_path
 
-    def _initUnet(self, layers = 3, featuresRoot = 16, filterSize = 3, poolSize = 2):
+    def _init_unet(self, layers = 3, features_root = 16, filter_size = 3, pool_size = 2):
         nx = tf.shape(self.x)[1]
         ny = tf.shape(self.x)[2]
         input = tf.reshape(self.x, tf.stack([-1, nx, ny, self._num_channels]))
-        batchSize = tf.shape(input)[0]
+        batch_size = tf.shape(input)[0]
  
         weights = []
         biases = []
         convs = []
         pools = OrderedDict()
         deconv = OrderedDict()
-        downHConvs = OrderedDict()
-        upHConvs = OrderedDict()
+        down_h_convs = OrderedDict()
+        up_h_convs = OrderedDict()
     
         # down layers
-        inSize = 1000
-        size = inSize
+        in_size = 1000
+        size = in_size
         for layer in range(0, layers):
-            features = 2**layer*featuresRoot
-            stddev = np.sqrt(2/(filterSize**2*features))
+            features = 2**layer*features_root
+            stddev = np.sqrt(2/(filter_size**2*features))
             if layer == 0:
-                w1 = Unet.weight([filterSize, filterSize, self._num_channels, features], stddev)
+                w1 = Unet.weight([filter_size, filter_size, self._num_channels, features], stddev)
             else:
-                w1 = Unet.weight([filterSize, filterSize, features//2, features], stddev)
+                w1 = Unet.weight([filter_size, filter_size, features//2, features], stddev)
             
-            w2 = Unet.weight([filterSize, filterSize, features, features], stddev)
+            w2 = Unet.weight([filter_size, filter_size, features, features], stddev)
             b1 = Unet.bias([features])
             b2 = Unet.bias([features])
         
             conv1 = Unet.conv2d(input, w1, self.keep_prob)
-            tmpHConv = tf.nn.relu(conv1 + b1)
-            conv2 = Unet.conv2d(tmpHConv, w2, self.keep_prob)
-            downHConvs[layer] = tf.nn.relu(conv2 + b2)
+            tmp_h_conv = tf.nn.relu(conv1 + b1)
+            conv2 = Unet.conv2d(tmp_h_conv, w2, self.keep_prob)
+            down_h_convs[layer] = tf.nn.relu(conv2 + b2)
         
             weights.append((w1, w2))
             biases.append((b1, b2))
@@ -122,33 +122,33 @@ class Unet:
         
             size -= 4
             if layer < layers - 1:
-                pools[layer] = Unet.maxPool(downHConvs[layer], poolSize)
+                pools[layer] = Unet.max_pool(down_h_convs[layer], pool_size)
                 input = pools[layer]
                 size /= 2
         
-        input = downHConvs[layers - 1]
+        input = down_h_convs[layers - 1]
         
         # up layers
         for layer in range(layers - 2, -1, -1):
-            features = 2**(layer + 1)*featuresRoot
-            stddev = np.sqrt(2/(filterSize**2*features))
+            features = 2**(layer + 1)*features_root
+            stddev = np.sqrt(2/(filter_size**2*features))
         
-            wd = Unet.weightDeconv([poolSize, poolSize, features//2, features], stddev)
+            wd = Unet.weight_deconv([pool_size, pool_size, features//2, features], stddev)
             bd = Unet.bias([features//2])
-            hDeconv = tf.nn.relu(Unet.deconv2d(input, wd, poolSize) + bd)
-            hDeconvConcat = Unet.crop_and_concat(downHConvs[layer], hDeconv)
-            deconv[layer] = hDeconvConcat
+            h_deconv = tf.nn.relu(Unet.deconv2d(input, wd, pool_size) + bd)
+            h_deconv_concat = Unet.crop_and_concat(down_h_convs[layer], h_deconv)
+            deconv[layer] = h_deconv_concat
         
-            w1 = Unet.weight([filterSize, filterSize, features, features//2], stddev)
-            w2 = Unet.weight([filterSize, filterSize, features//2, features//2], stddev)
+            w1 = Unet.weight([filter_size, filter_size, features, features//2], stddev)
+            w2 = Unet.weight([filter_size, filter_size, features//2, features//2], stddev)
             b1 = Unet.bias([features//2])
             b2 = Unet.bias([features//2])
         
-            conv1 = Unet.conv2d(hDeconvConcat, w1, self.keep_prob)
+            conv1 = Unet.conv2d(h_deconv_concat, w1, self.keep_prob)
             hConv = tf.nn.relu(conv1 + b1)
             conv2 = Unet.conv2d(hConv, w2, self.keep_prob)
             input = tf.nn.relu(conv2 + b2)
-            upHConvs[layer] = input
+            up_h_convs[layer] = input
 
             weights.append((w1, w2))
             biases.append((b1, b2))
@@ -158,11 +158,11 @@ class Unet:
             size -= 4
 
         # Output Map
-        weight = Unet.weight([1, 1, featuresRoot, self._num_classes], stddev)
+        weight = Unet.weight([1, 1, features_root, self._num_classes], stddev)
         bias = Unet.bias([self._num_classes])
         conv = Unet.conv2d(input, weight, tf.constant(1.0))
-        outputMap = tf.nn.relu(conv + bias)
-        upHConvs['out'] = outputMap
+        outputmap = tf.nn.relu(conv + bias)
+        up_h_convs['out'] = outputmap
             
         variables = []
         for w1, w2 in weights:
@@ -173,43 +173,34 @@ class Unet:
             variables.append(b1)
             variables.append(b2)
 
-        return outputMap, variables, int(inSize - size)
+        return outputmap, variables, int(in_size - size)
 
-    def _getCost(self, logits, costName, costKwargs):
-        """
-        Constructs the cost function, either cross_entropy, weighted cross_entropy or dice_coefficient.
-        Optional arguments are:
-        class_weights: weights for the different classes in case of multi-class imbalance
-        regularizer: power of the L2 regularizers added to the loss function
-        """
+    def _getCost(self, logits, cost_name, cost_kwargs):
+        flat_logits = tf.reshape(logits, [-1, self._num_classes])
+        flat_labels = tf.reshape(self.y, [-1, self._num_classes])
+        if cost_name == 'cross_entropy':
+            class_weights = cost_kwargs.pop('class_weights', None)
 
-        flatLogits = tf.reshape(logits, [-1, self._num_classes])
-        flatLabels = tf.reshape(self.y, [-1, self._num_classes])
-        if costName == 'cross_entropy':
-            classWeights = costKwargs.pop('class_weights', None)
+            if class_weights is not None:
+                class_weights = tf.constant(np.array(class_weights, dtype = np.float32))
 
-            if classWeights is not None:
-                classWeights = tf.constant(np.array(classWeights, dtype = np.float32))
+                weight_map = tf.multiply(flat_labels, class_weights)
+                weight_map = tf.reduce_sum(weight_map, axis = 1)
 
-                weightMap = tf.multiply(flatLabels, classWeights)
-                weightMap = tf.reduce_sum(weightMap, axis = 1)
-
-                lossMap = tf.nn.softmax_cross_entropy_with_logits_v2(
-                    logits = flatLogits,
-                    labels = flatLabels
+                loss_map = tf.nn.softmax_cross_entropy_with_logits_v2(
+                    logits = flat_logits,
+                    labels = flat_labels
                 )
-                weightedLoss = tf.multiply(lossMap, weightMap)
-
-                loss = tf.reduce_mean(weightedLoss)
-
+                weighted_loss = tf.multiply(loss_map, weight_map)
+                loss = tf.reduce_mean(weighted_loss)
             else:
                 loss = tf.reduce_mean(
                     tf.nn.softmax_cross_entropy_with_logits_v2(
-                        logits = flatLogits,
-                        labels = flatLabels
+                        logits = flat_logits,
+                        labels = flat_labels
                     )
                 )
-        elif costName == 'dice_coefficient':
+        elif cost_name == 'dice_coefficient':
             eps = 1e-5
             prediction = Unet.pixelwise_softmax(logits)
             intersection = tf.reduce_sum(prediction * self.y)
@@ -217,9 +208,9 @@ class Unet:
             loss = -(2*intersection/(union))
 
         else:
-            raise ValueError('Unknown cost function: ' % costName)
+            raise ValueError('Unknown cost function: ' % cost_name)
 
-        regularizer = costKwargs.pop('regularizer', None)
+        regularizer = cost_kwargs.pop('regularizer', None)
         if regularizer is not None:
             regularizers = sum([tf.nn.l2_loss(variable) for variable in self.variables])
             loss += regularizer*regularizers

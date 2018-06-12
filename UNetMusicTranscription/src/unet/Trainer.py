@@ -18,7 +18,7 @@ class Trainer(object):
     verification_batch_size = 4
 
     @staticmethod
-    def errorRate(predictions, labels):
+    def error_rate(predictions, labels):
         return 100.0 - (100.0*np.sum(np.argmax(predictions, 3) == np.argmax(labels, 3))/(predictions.shape[0]*predictions.shape[1]*predictions.shape[2]))
 
     def __init__(self, net, batch_size = 1, norm_grads = False, optimizer = 'momentum', opt_kwargs = {}):
@@ -28,63 +28,63 @@ class Trainer(object):
         self.optimizer = optimizer
         self.opt_kwargs = opt_kwargs
 
-    def train(self, dataProvider, outputPath, trainingIters = 10, epochs = 100, dropout = 0.75, displayStep = 1, restore = False, writeGraph = False, predictionPath = 'prediction'):
-        savePath = os.path.join(outputPath, 'model.ckpt')
+    def train(self, data_provider, output_path, trainingIters = 10, epochs = 100, dropout = 0.75, displayStep = 1, restore = False, writeGraph = False, predictionPath = 'prediction'):
+        save_path = os.path.join(output_path, 'model.ckpt')
         if epochs == 0:
-            return savePath
+            return save_path
 
-        init = self._initialize(trainingIters, outputPath, restore, predictionPath)
+        init = self._initialize(trainingIters, output_path, restore, predictionPath)
         with tf.Session() as sess:
             if writeGraph:
-                tf.train.write_graph(sess.graph_def, outputPath, 'graph.pb', False)
+                tf.train.write_graph(sess.graph_def, output_path, 'graph.pb', False)
             
             sess.run(init)
 
             if restore:
-                ckpt = tf.train.get_checkpoint_state(outputPath)
+                ckpt = tf.train.get_checkpoint_state(output_path)
                 if ckpt and ckpt.model_checkpoint_path:
                     self.net.restore(sess, ckpt.model_checkpoint_path)
 
-            x_test, y_test = dataProvider(self.verification_batch_size)
+            x_test, y_test = data_provider(self.verification_batch_size)
             pred_shape = self.store_prediction(sess, x_test, y_test, '_init')
 
-            summaryWriter = tf.summary.FileWriter(outputPath, graph = sess.graph)
+            summary_writer = tf.summary.FileWriter(output_path, graph = sess.graph)
             logging.info('Start optimization')
 
-            avgGradients = None
+            avg_gradients = None
             for epoch in range(epochs):
-                totalLoss = 0
+                total_loss = 0
                 for step in range((epoch*trainingIters), ((epoch + 1)*trainingIters)):
-                    batchX, batchY = dataProvider(self.batch_size)
+                    x_batch, y_batch = data_provider(self.batch_size)
 
                     # Run optimization op (backprop)
                     _, loss, lr, gradients = sess.run(
                         (self.optimizer, self.net.cost, self.learning_rate_node, self.net.gradients_node),
                         feed_dict = {
-                            self.net.x: batchX,
-                            self.net.y: crop_to_shape(batchY, pred_shape),
+                            self.net.x: x_batch,
+                            self.net.y: crop_to_shape(y_batch, pred_shape),
                             self.net.keep_prob: dropout
                         }
                     )
 
                     if step % displayStep == 0:
-                        self.outputMinibatchStats(
+                        self.output_minibatch_stats(
                             sess,
-                            summaryWriter,
+                            summary_writer,
                             step,
-                            batchX,
-                            crop_to_shape(batchY, pred_shape)
+                            x_batch,
+                            crop_to_shape(y_batch, pred_shape)
                         )
 
-                    totalLoss += loss
+                    total_loss += loss
 
-                self.outputEpochStats(epoch, totalLoss, trainingIters, lr)
+                self.output_epoch_stats(epoch, total_loss, trainingIters, lr)
                 self.store_prediction(sess, x_test, y_test, 'epoch_%s' % epoch)
 
-                savePath = self.net.save(sess, savePath)
-            logging.info('Optimization Finished!')
+                save_path = self.net.save(sess, save_path)
 
-            return savePath
+            logging.info('Optimization Finished!')
+            return save_path
 
     def store_prediction(self, sess, x_batch, y_batch, name):
         prediction = sess.run(
@@ -106,16 +106,16 @@ class Trainer(object):
             }
         )
 
-        logging.info('Verification error= {:.1f}%, loss= {:.4f}'.format(Trainer.errorRate(prediction, crop_to_shape(y_batch, prediction.shape)), loss))
+        logging.info('Verification error= {:.1f}%, loss= {:.4f}'.format(Trainer.error_rate(prediction, crop_to_shape(y_batch, prediction.shape)), loss))
         img = combine_img_prediction(x_batch, y_batch, prediction)
         save_image(img, '%s/%s.jpg' % (self.prediction_path, name))
         return pred_shape
 
-    def outputEpochStats(self, epoch, totalLoss, trainingIters, lr):
-        logging.info('Epoch {:}, Average loss: {:.4f}, learning rate: {:.4f}'.format(epoch, (totalLoss/trainingIters), lr))
+    def output_epoch_stats(self, epoch, total_loss, training_iters, lr):
+        logging.info('Epoch {:}, Average loss: {:.4f}, learning rate: {:.4f}'.format(epoch, (total_loss/training_iters), lr))
 
-    def outputMinibatchStats(self, sess, summary_writer, step, x_batch, y_batch):
-        summaryStr, loss, acc, predictions = sess.run([
+    def output_minibatch_stats(self, sess, summary_writer, step, x_batch, y_batch):
+        summary_str, loss, acc, predictions = sess.run([
                 self.summary_op,
                 self.net.cost,
                 self.net.accuracy,
@@ -127,21 +127,21 @@ class Trainer(object):
                 self.net.keep_prob: 1.0
             }
         )
-        summary_writer.add_summary(summaryStr, step)
+        summary_writer.add_summary(summary_str, step)
         summary_writer.flush()
-        logging.info('Iter {:}, Minibatch Loss= {:.4f}, Training Accuracy= {:.4f}, Minibatch error= {:.1f}%'.format(step, loss, acc, Trainer.errorRate(predictions, y_batch)))
+        logging.info('Iter {:}, Minibatch Loss= {:.4f}, Training Accuracy= {:.4f}, Minibatch error= {:.1f}%'.format(step, loss, acc, Trainer.error_rate(predictions, y_batch)))
 
-    def _getOptimizer(self, trainingIters, globalStep):
+    def _getOptimizer(self, training_iters, global_step):
         if self.optimizer == 'momentum':
-            learningRate = self.opt_kwargs.pop('learning_rate', 0.2)
-            decayRate = self.opt_kwargs.pop('decay_rate', 0.95)
+            learning_rate = self.opt_kwargs.pop('learning_rate', 0.2)
+            decay_rate = self.opt_kwargs.pop('decay_rate', 0.95)
             momentum = self.opt_kwargs.pop('momentum', 0.2)
 
             self.learning_rate_node = tf.train.exponential_decay(
-                learning_rate = learningRate,
-                global_step = globalStep,
-                decay_steps = trainingIters,
-                decay_rate = decayRate,
+                learning_rate = learning_rate,
+                global_step = global_step,
+                decay_steps = training_iters,
+                decay_rate = decay_rate,
                 staircase = True
             )
 
@@ -152,11 +152,11 @@ class Trainer(object):
             ) \
             .minimize(
                 self.net.cost,
-                global_step = globalStep
+                global_step = global_step
             )
         elif self.optimizer == 'adam':
-            learningRate = self.opt_kwargs.pop('learning_rate', 0.001)
-            self.learning_rate_node = tf.Variable(learningRate)
+            learning_rate = self.opt_kwargs.pop('learning_rate', 0.001)
+            self.learning_rate_node = tf.Variable(learning_rate)
 
             return tf.train.AdamOptimizer(
                 learning_rate = self.learning_rate_node,
@@ -164,13 +164,13 @@ class Trainer(object):
             ) \
             .minimize(
                 self.net.cost,
-                global_step = globalStep
+                global_step = global_step
             )
 
         # TODO raise exception
 
-    def _initialize(self, trainingIters, outputPath, restore, predictionPath):
-        globalStep = tf.Variable(0)
+    def _initialize(self, training_iters, output_path, restore, prediction_path):
+        global_step = tf.Variable(0)
 
         self.norm_gradients_node = tf.Variable(tf.constant(0.0, shape = [len(self.net.gradients_node)]))
 
@@ -178,50 +178,28 @@ class Trainer(object):
         tf.summary.scalar('cross_entropy', self.net.cross_entropy)
         tf.summary.scalar('accuracy', self.net.accuracy)
 
-        self.optimizer = self._getOptimizer(trainingIters, globalStep)
+        self.optimizer = self._getOptimizer(training_iters, global_step)
         tf.summary.scalar('learning_rate', self.learning_rate_node)
 
         self.summary_op = tf.summary.merge_all()
         init = tf.global_variables_initializer()
 
-        self.prediction_path = predictionPath
-        absPredictionPath = os.path.abspath(self.prediction_path)
-        outputPath = os.path.abspath(outputPath)
+        self.prediction_path = prediction_path
+        abs_prediction_path = os.path.abspath(self.prediction_path)
+        output_path = os.path.abspath(output_path)
 
         if not restore:
-            logging.info("Removing '{:}'".format(absPredictionPath))
-            shutil.rmtree(absPredictionPath, ignore_errors = True)
-            logging.info("Removing '{:}'".format(outputPath))
-            shutil.rmtree(outputPath, ignore_errors = True)
+            logging.info("Removing '{:}'".format(abs_prediction_path))
+            shutil.rmtree(abs_prediction_path, ignore_errors = True)
+            logging.info("Removing '{:}'".format(output_path))
+            shutil.rmtree(output_path, ignore_errors = True)
 
-        if not os.path.exists(absPredictionPath):
-            logging.info("Allocating '{:}'".format(absPredictionPath))
-            os.makedirs(absPredictionPath)
+        if not os.path.exists(abs_prediction_path):
+            logging.info("Allocating '{:}'".format(abs_prediction_path))
+            os.makedirs(abs_prediction_path)
 
-        if not os.path.exists(outputPath):
-            logging.info("Allocating '{:}'".format(outputPath))
-            os.makedirs(outputPath)
+        if not os.path.exists(output_path):
+            logging.info("Allocating '{:}'".format(output_path))
+            os.makedirs(output_path)
 
         return init
-
-
-def get_image_summary(img, idx=0):
-    V = tf.slice(img, (0, 0, 0, idx), (1, -1, -1, 1))
-    V -= tf.reduce_min(V)
-    V /= tf.reduce_max(V)
-    V *= 255
-
-    img_w = tf.shape(img)[1]
-    img_h = tf.shape(img)[2]
-    V = tf.reshape(V, tf.stack((img_w, img_h, 1)))
-    V = tf.transpose(V, (2, 0, 1))
-    V = tf.reshape(V, tf.stack((-1, img_w, img_h, 1)))
-    return V
-
-def _update_avg_gradients(avg_gradients, gradients, step):
-    if avg_gradients is None:
-        avg_gradients = [np.zeros_like(gradient) for gradient in gradients]
-    for i in range(len(gradients)):
-        avg_gradients[i] = (avg_gradients[i] * (1.0 - (1.0 / (step + 1)))) + (gradients[i] / (step + 1))
-
-    return avg_gradients
