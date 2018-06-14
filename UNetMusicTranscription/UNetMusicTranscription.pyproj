@@ -41,10 +41,15 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="test\fast_run.py" />
+    <Compile Include="utils\utils.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="utils\__init__.py" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="data\" />
     <Folder Include="data\MIREX\" />
+    <Folder Include="utils\" />
     <Folder Include="preprocessing\" />
     <Folder Include="test\" />
     <Folder Include="tf_unet\" />
