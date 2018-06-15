@@ -8,8 +8,8 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 
-from utils.AudioReader import AudioReader
-from utils.Spectrogram import Spectrogram
+from src.utils.AudioReader import AudioReader
+from src.utils.Spectrogram import Spectrogram
 
 DATA_SRC_PATH = './data/raw/MIREX/'
 
@@ -56,7 +56,6 @@ class Preprocessor:
             self._save_sliced_spectrogram(spectrogram, file_name, slice_length)
 
             print()
-            break
 
     def _save_sliced_spectrogram(self, spectrogram, file_name, slice_length):
         # TODO move this somewhere more appropiate
