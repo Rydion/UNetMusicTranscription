@@ -41,35 +41,30 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="test\fast_run.py" />
+    <Compile Include="utils\AudioReader.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="utils\Spectrogram.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="utils\utils.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="utils\__init__.py" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="data\**\*" />
     <Folder Include="data\" />
     <Folder Include="data\preprocessed\" />
     <Folder Include="data\preprocessed\MIREX\" />
-    <Folder Include="data\raw\MIREX\" />
+    <Folder Include="data\preprocessed\MIREX\input\" />
     <Folder Include="data\raw\" />
+    <Folder Include="data\raw\MIREX\" />
     <Folder Include="utils\" />
     <Folder Include="preprocessing\" />
     <Folder Include="test\" />
     <Folder Include="tf_unet\" />
     <Folder Include="unet\" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="data\raw\MIREX\b.mid" />
-    <Content Include="data\raw\MIREX\b.wav" />
-    <Content Include="data\raw\MIREX\c.mid" />
-    <Content Include="data\raw\MIREX\c.wav" />
-    <Content Include="data\raw\MIREX\f.mid" />
-    <Content Include="data\raw\MIREX\f.wav" />
-    <Content Include="data\raw\MIREX\h.mid" />
-    <Content Include="data\raw\MIREX\h.wav" />
-    <Content Include="data\raw\MIREX\o.mid" />
-    <Content Include="data\raw\MIREX\o.wav" />
-    <Content Include="data\raw\MIREX\README" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
