@@ -1,0 +1,74 @@
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>dd7ba320-ea2a-467f-9f26-17ea25329b5a</ProjectGuid>
+    <ProjectHome>.</ProjectHome>
+    <StartupFile>UNetMusicTranscription.py</StartupFile>
+    <SearchPath>
+    </SearchPath>
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <Name>UNetMusicTranscription</Name>
+    <RootNamespace>UNetMusicTranscription</RootNamespace>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="src\preprocessing\generate_spectrograms.py" />
+    <Compile Include="src\test\fast_run.py" />
+    <Compile Include="src\tf_unet\image_gen.py" />
+    <Compile Include="src\tf_unet\image_util.py" />
+    <Compile Include="src\tf_unet\__init__.py" />
+    <Compile Include="src\unet\Trainer.py" />
+    <Compile Include="src\unet\Unet.py" />
+    <Compile Include="src\unet\util.py" />
+    <Compile Include="src\unet\__init__.py" />
+    <Compile Include="src\utils\AudioReader.py" />
+    <Compile Include="src\utils\Spectrogram.py" />
+    <Compile Include="src\utils\utils.py" />
+    <Compile Include="src\utils\__init__.py" />
+    <Compile Include="UNetMusicTranscription.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include=".editorconfig" />
+    <Content Include=".gitattributes" />
+    <Content Include=".gitignore" />
+    <Content Include="data\**\*" />
+    <Content Include="src\**\*" />
+    <Content Include="LICENSE" />
+    <Content Include="README.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="data\" />
+    <Folder Include="data\preprocessed\" />
+    <Folder Include="data\preprocessed\MIREX\" />
+    <Folder Include="data\preprocessed\MIREX\input\" />
+    <Folder Include="data\raw\" />
+    <Folder Include="data\raw\MIREX\" />
+    <Folder Include="src\" />
+    <Folder Include="src\preprocessing\" />
+    <Folder Include="src\test\" />
+    <Folder Include="src\tf_unet\" />
+    <Folder Include="src\tf_unet\__pycache__\" />
+    <Folder Include="src\unet\" />
+    <Folder Include="src\unet\__pycache__\" />
+    <Folder Include="src\utils\" />
+    <Folder Include="src\utils\__pycache__\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
+  <!-- Uncomment the CoreCompile target to enable the Build command in
+       Visual Studio and specify your pre- and post-build commands in
+       the BeforeBuild and AfterBuild targets below. -->
+  <!--<Target Name="CoreCompile" />-->
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+</Project>

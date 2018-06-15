@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27703.2018
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "UNetMusicTranscription", "UNetMusicTranscription\UNetMusicTranscription.pyproj", "{DD7BA320-EA2A-467F-9F26-17EA25329B5A}"
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "UNetMusicTranscription", "UNetMusicTranscription.pyproj", "{DD7BA320-EA2A-467F-9F26-17EA25329B5A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
