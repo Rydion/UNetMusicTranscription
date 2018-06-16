@@ -15,7 +15,7 @@ from src.utils.Spectrogram import Spectrogram
 DATA_SRC_PATH = './data/raw/MIREX/'
 
 # TODO: debug
-#       correct the size of the saved preprocessed images
+#       make the size of the output/input pair images a parameter
 #       implement midi to piano roll conversion
 #       implement q-transform as an alternative to SFFT
 #       use logging instead of prints
@@ -60,7 +60,7 @@ class Preprocessor:
             self._save_sliced_spectrogram(spectrogram, file_name, slice_length)
 
             print()
-
+        
         # Generate visualization slices for all mid files (output)
         for file in os.listdir(dir_path):
             file_name, file_extension = os.path.splitext(file)
@@ -71,13 +71,13 @@ class Preprocessor:
             mid.draw_roll(draw_colorbar = False)
             #print(np.shape(mid.get_roll()))
             break
-
+        
     def _save_sliced_spectrogram(self, spectrogram, file_name, slice_length):
         # TODO move this somewhere more appropiate
         if not os.path.exists(Preprocessor.INPUT_DATA_DEST_PATH):
             os.makedirs(Preprocessor.INPUT_DATA_DEST_PATH)
 
-        fig, ax = plt.subplots(1)
+        fig, ax = plt.subplots(1, figsize = (4, 16), dpi = 32)
         fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
         ax.axis('off')
     
@@ -94,18 +94,19 @@ class Preprocessor:
                 c
             )
             dest_path = os.path.join(Preprocessor.INPUT_DATA_DEST_PATH, file_name + '_' + str(i).zfill(3) + '.png')
-            fig.savefig(dest_path, dpi = 300, frameon = 'false')
+            fig.savefig(dest_path)
         end = time.clock()
         print('Saved all slices in %.2f seconds.' % (end - start))
 
         plt.close(fig)
 
     def _save_spectrogram(self, spectrogram, file_name):
-        fig, ax = plt.subplots(1)
+        fig, ax = plt.subplots(1, figsize = (4, 16), dpi = 32)
         fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
         ax.axis('off')
         ax.pcolormesh(spectrogram.times, spectrogram.frequencies, spectrogram.values)
-        fig.savefig(os.path.join(Preprocessor.INPUT_DATA_DEST_PATH, file_name + '.png'), dpi = 300, frameon = 'false')
+        dest_path = os.path.join(Preprocessor.INPUT_DATA_DEST_PATH, file_name + '.png')
+        fig.savefig(dest_path)
         plt.close(fig)
 
 def main():
