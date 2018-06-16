@@ -8,13 +8,15 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 
+from src.midi import roll
 from src.utils.AudioReader import AudioReader
 from src.utils.Spectrogram import Spectrogram
 
 DATA_SRC_PATH = './data/raw/MIREX/'
 
 # TODO: debug
-#       implement midi to piano roll preprocessing
+#       correct the size of the saved preprocessed images
+#       implement midi to piano roll conversion
 #       implement q-transform as an alternative to SFFT
 #       use logging instead of prints
 
@@ -27,8 +29,10 @@ class Preprocessor:
     SFFT_STRIDE = 768 #SFFT_WINDOW_LENGTH//2
 
     def preprocess(self, dir_path, plot = False):
+        # TODO break this function up with auxiliary ones
         # Generate spectrogram slices for all wav files (input)
         for file in os.listdir(dir_path):
+            break
             file_name, file_extension = os.path.splitext(file)
             if file_extension != '.wav':
                 continue
@@ -56,6 +60,17 @@ class Preprocessor:
             self._save_sliced_spectrogram(spectrogram, file_name, slice_length)
 
             print()
+
+        # Generate visualization slices for all mid files (output)
+        for file in os.listdir(dir_path):
+            file_name, file_extension = os.path.splitext(file)
+            if file_extension != '.mid':
+                continue
+
+            mid = roll.MidiFile(os.path.join(dir_path, file), verbose = False)
+            mid.draw_roll(draw_colorbar = False)
+            #print(np.shape(mid.get_roll()))
+            break
 
     def _save_sliced_spectrogram(self, spectrogram, file_name, slice_length):
         # TODO move this somewhere more appropiate

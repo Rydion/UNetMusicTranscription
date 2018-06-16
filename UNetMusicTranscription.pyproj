@@ -21,8 +21,12 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="src\midi\roll.old.py" />
+    <Compile Include="src\midi\roll.py" />
+    <Compile Include="src\midi\__init__.py" />
     <Compile Include="src\preprocessing\preprocess.py" />
-    <Compile Include="src\test\fast_run.py" />
+    <Compile Include="src\preprocessing\__init__.py" />
+    <Compile Include="src\tests\fast_run.py" />
     <Compile Include="src\tf_unet\image_gen.py" />
     <Compile Include="src\tf_unet\image_util.py" />
     <Compile Include="src\tf_unet\__init__.py" />
@@ -315,6 +319,7 @@
     <Content Include="data\preprocessed\MIREX\input\o_052.png" />
     <Content Include="data\preprocessed\MIREX\input\o_053.png" />
     <Content Include="data\preprocessed\MIREX\input\o_054.png" />
+    <Content Include="data\preprocessed\MIREX\output\b.png" />
     <Content Include="data\raw\MIREX\b.mid" />
     <Content Include="data\raw\MIREX\b.wav" />
     <Content Include="data\raw\MIREX\c.mid" />
@@ -331,29 +336,14 @@
     <Content Include="src\tf_unet\image_gen.py" />
     <Content Include="src\tf_unet\image_util.py" />
     <Content Include="src\tf_unet\__init__.py" />
-    <Content Include="src\tf_unet\__pycache__\image_gen.cpython-36.pyc" />
-    <Content Include="src\tf_unet\__pycache__\image_util.cpython-36.pyc" />
-    <Content Include="src\tf_unet\__pycache__\layers.cpython-36.pyc" />
-    <Content Include="src\tf_unet\__pycache__\unet.cpython-36.pyc" />
-    <Content Include="src\tf_unet\__pycache__\util.cpython-36.pyc" />
-    <Content Include="src\tf_unet\__pycache__\__init__.cpython-36.pyc" />
     <Content Include="src\unet\Trainer.py" />
     <Content Include="src\unet\Unet.py" />
     <Content Include="src\unet\util.py" />
     <Content Include="src\unet\__init__.py" />
-    <Content Include="src\unet\__pycache__\layers.cpython-36.pyc" />
-    <Content Include="src\unet\__pycache__\Trainer.cpython-36.pyc" />
-    <Content Include="src\unet\__pycache__\Unet.cpython-36.pyc" />
-    <Content Include="src\unet\__pycache__\util.cpython-36.pyc" />
-    <Content Include="src\unet\__pycache__\__init__.cpython-36.pyc" />
     <Content Include="src\utils\AudioReader.py" />
     <Content Include="src\utils\Spectrogram.py" />
     <Content Include="src\utils\utils.py" />
     <Content Include="src\utils\__init__.py" />
-    <Content Include="src\utils\__pycache__\AudioReader.cpython-36.pyc" />
-    <Content Include="src\utils\__pycache__\Spectrogram.cpython-36.pyc" />
-    <Content Include="src\utils\__pycache__\utils.cpython-36.pyc" />
-    <Content Include="src\utils\__pycache__\__init__.cpython-36.pyc" />
     <Content Include="LICENSE" />
     <Content Include="README.md" />
   </ItemGroup>
@@ -362,10 +352,13 @@
     <Folder Include="data\preprocessed\" />
     <Folder Include="data\preprocessed\MIREX\" />
     <Folder Include="data\preprocessed\MIREX\input\" />
+    <Folder Include="data\preprocessed\MIREX\output\" />
     <Folder Include="data\raw\" />
     <Folder Include="data\raw\MIREX\" />
     <Folder Include="src\" />
+    <Folder Include="src\midi\" />
     <Folder Include="src\preprocessing\" />
+    <Folder Include="src\tests\" />
     <Folder Include="src\test\" />
     <Folder Include="src\tf_unet\" />
     <Folder Include="src\unet\" />
