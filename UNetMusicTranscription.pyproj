@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>dd7ba320-ea2a-467f-9f26-17ea25329b5a</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>src\UNetMusicTranscription.py</StartupFile>
+    <StartupFile>UNetMusicTranscription.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -21,23 +21,22 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="src\midi\roll.old.py" />
-    <Compile Include="src\midi\roll.py" />
-    <Compile Include="src\midi\__init__.py" />
-    <Compile Include="src\preprocess.py" />
-    <Compile Include="src\tests\fast_run.py" />
-    <Compile Include="src\tf_unet\image_gen.py" />
-    <Compile Include="src\tf_unet\image_util.py" />
-    <Compile Include="src\tf_unet\__init__.py" />
-    <Compile Include="src\unet\Trainer.py" />
-    <Compile Include="src\unet\Unet.py" />
-    <Compile Include="src\unet\util.py" />
-    <Compile Include="src\unet\__init__.py" />
-    <Compile Include="src\utils\AudioReader.py" />
-    <Compile Include="src\utils\Spectrogram.py" />
-    <Compile Include="src\utils\utils.py" />
-    <Compile Include="src\utils\__init__.py" />
-    <Compile Include="src\UNetMusicTranscription.py" />
+    <Compile Include="midiviz\roll.py" />
+    <Compile Include="midiviz\__init__.py" />
+    <Compile Include="preprocess.py" />
+    <Compile Include="tests\fast_run.py" />
+    <Compile Include="tf_unet\image_gen.py" />
+    <Compile Include="tf_unet\image_util.py" />
+    <Compile Include="tf_unet\__init__.py" />
+    <Compile Include="unet\Trainer.py" />
+    <Compile Include="unet\Unet.py" />
+    <Compile Include="unet\util.py" />
+    <Compile Include="unet\__init__.py" />
+    <Compile Include="utils\AudioReader.py" />
+    <Compile Include="utils\Spectrogram.py" />
+    <Compile Include="utils\utils.py" />
+    <Compile Include="utils\__init__.py" />
+    <Compile Include="UNetMusicTranscription.py" />
   </ItemGroup>
   <ItemGroup>
     <Content Include=".editorconfig" />
@@ -329,8 +328,6 @@
     <Content Include="data\raw\MIREX\o.mid" />
     <Content Include="data\raw\MIREX\o.wav" />
     <Content Include="data\raw\MIREX\README" />
-    <Content Include="src\preprocessing\preprocess.py" />
-    <Content Include="src\test\fast_run.py" />
     <Content Include="src\tf_unet\image_gen.py" />
     <Content Include="src\tf_unet\image_util.py" />
     <Content Include="src\tf_unet\__init__.py" />
@@ -353,13 +350,15 @@
     <Folder Include="data\preprocessed\MIREX\output\" />
     <Folder Include="data\raw\" />
     <Folder Include="data\raw\MIREX\" />
+    <Folder Include="midiviz\" />
     <Folder Include="src\" />
-    <Folder Include="src\midi\" />
-    <Folder Include="src\tests\" />
-    <Folder Include="src\test\" />
     <Folder Include="src\tf_unet\" />
     <Folder Include="src\unet\" />
     <Folder Include="src\utils\" />
+    <Folder Include="tests\" />
+    <Folder Include="tf_unet\" />
+    <Folder Include="unet\" />
+    <Folder Include="utils\" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in

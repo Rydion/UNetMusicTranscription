@@ -12,7 +12,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 from unet.Unet import Unet
-from src.unet.Trainer import Trainer
+from unet.Trainer import Trainer
 from tf_unet import image_gen
 
 def init():
