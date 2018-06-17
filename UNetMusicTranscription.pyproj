@@ -24,8 +24,7 @@
     <Compile Include="src\midi\roll.old.py" />
     <Compile Include="src\midi\roll.py" />
     <Compile Include="src\midi\__init__.py" />
-    <Compile Include="src\preprocessing\preprocess.py" />
-    <Compile Include="src\preprocessing\__init__.py" />
+    <Compile Include="src\preprocess.py" />
     <Compile Include="src\tests\fast_run.py" />
     <Compile Include="src\tf_unet\image_gen.py" />
     <Compile Include="src\tf_unet\image_util.py" />
@@ -319,7 +318,6 @@
     <Content Include="data\preprocessed\MIREX\input\o_052.png" />
     <Content Include="data\preprocessed\MIREX\input\o_053.png" />
     <Content Include="data\preprocessed\MIREX\input\o_054.png" />
-    <Content Include="data\preprocessed\MIREX\output\b.png" />
     <Content Include="data\raw\MIREX\b.mid" />
     <Content Include="data\raw\MIREX\b.wav" />
     <Content Include="data\raw\MIREX\c.mid" />
@@ -357,7 +355,6 @@
     <Folder Include="data\raw\MIREX\" />
     <Folder Include="src\" />
     <Folder Include="src\midi\" />
-    <Folder Include="src\preprocessing\" />
     <Folder Include="src\tests\" />
     <Folder Include="src\test\" />
     <Folder Include="src\tf_unet\" />

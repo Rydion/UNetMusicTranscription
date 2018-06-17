@@ -68,8 +68,27 @@ class Preprocessor:
                 continue
 
             mid = roll.MidiFile(os.path.join(dir_path, file), verbose = False)
+            mid.save_roll(os.path.join(Preprocessor.OUTPUT_DATA_DEST_PATH, file_name + '.png'))
             mid.draw_roll(draw_colorbar = False)
-            #print(np.shape(mid.get_roll()))
+
+            fig, ax = plt.subplots(1, figsize = (4, 16), dpi = 32)
+            fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
+
+            img = mid.get_roll_image()
+            slice_length = np.shape(img)[1]//54
+            chunks = mid.get_chunk_generator(slice_length)
+            for i, c in enumerate(chunks):
+                if np.shape(c)[1] < slice_length:
+                    break
+                
+                ax.clear()
+                ax.axis('off')
+                ax.imshow(c, interpolation='nearest', aspect='auto')
+
+                dest_path = os.path.join(Preprocessor.OUTPUT_DATA_DEST_PATH, file_name + '_' + str(i).zfill(3) + '.png')
+                fig.savefig(dest_path)
+
+            plt.close(fig)
             break
         
     def _save_sliced_spectrogram(self, spectrogram, file_name, slice_length):
@@ -83,7 +102,7 @@ class Preprocessor:
     
         start = time.clock()
         chunks = spectrogram.get_chunk_generator(slice_length)
-        for i, c in enumerate(chunks):    
+        for i, c in enumerate(chunks):
             # Don't save the last slice if it has a different size from the rest
             if np.shape(c)[1] < slice_length:
                 break

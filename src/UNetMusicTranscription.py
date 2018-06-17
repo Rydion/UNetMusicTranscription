@@ -15,7 +15,6 @@ from unet.Unet import Unet
 from src.unet.Trainer import Trainer
 from tf_unet import image_gen
 
-
 def init():
     tf.reset_default_graph()
 
