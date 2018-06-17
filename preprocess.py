@@ -28,6 +28,8 @@ class Preprocessor:
     SFFT_STRIDE = 768 #SFFT_WINDOW_LENGTH//2
 
     def preprocess(self, dir_path, plot = False):
+        self._create_output_folders()
+
         # TODO break this function up with auxiliary ones
         # Generate spectrogram slices for all wav files (input)
         for file in os.listdir(dir_path):
@@ -59,6 +61,7 @@ class Preprocessor:
             self._save_sliced_spectrogram(spectrogram, file_name, slice_length)
 
             print()
+            break
         
         # Generate visualization slices for all mid files (output)
         for file in os.listdir(dir_path):
@@ -69,20 +72,27 @@ class Preprocessor:
             print('Generating piano roll for %s.' % file)
 
             mid = roll.MidiFile(os.path.join(dir_path, file), verbose = False)
+            mid.save_roll(os.path.join(Preprocessor.OUTPUT_DATA_DEST_PATH, file_name + '.png'))
             if plot:
-                mid.draw_roll()
+                mid.draw_roll(draw_colorbar = False)
 
-            slice_length = np.shape(mid.get_roll_image())[1]//54 # Don't hardcode this
+            print(np.shape(mid.get_roll_image()))
+            print(mid.length_seconds)
+            slice_length = np.shape(mid.get_roll_image())[1]//mid.length_seconds # TODO numerator is not correct
+            print(slice_length)
             self._save_sliced_piano_roll(mid, file_name, slice_length)
 
             print()
-            break # REMOVE
-        
-    def _save_sliced_spectrogram(self, spectrogram, file_name, slice_length):
-        # TODO move this somewhere more appropiate
+            break
+
+    def _create_output_folders(self):
         if not os.path.exists(Preprocessor.INPUT_DATA_DEST_PATH):
             os.makedirs(Preprocessor.INPUT_DATA_DEST_PATH)
 
+        if not os.path.exists(Preprocessor.OUTPUT_DATA_DEST_PATH):
+            os.makedirs(Preprocessor.OUTPUT_DATA_DEST_PATH)
+
+    def _save_sliced_spectrogram(self, spectrogram, file_name, slice_length):
         fig, ax = plt.subplots(1, figsize = (4, 16), dpi = 32)
         fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
         ax.axis('off')
@@ -107,10 +117,6 @@ class Preprocessor:
         plt.close(fig)
 
     def _save_sliced_piano_roll(self, mid, file_name, slice_length):
-        # TODO move this somewhere more appropiate
-        if not os.path.exists(Preprocessor.OUTPUT_DATA_DEST_PATH):
-            os.makedirs(Preprocessor.OUTPUT_DATA_DEST_PATH)
-
         fig, ax = plt.subplots(1, figsize = (4, 16), dpi = 32)
         fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
 
@@ -122,7 +128,7 @@ class Preprocessor:
                 
             ax.clear()
             ax.axis('off')
-            ax.imshow(c, aspect='auto') # interpolation='nearest', 
+            ax.imshow(c, aspect='auto')
 
             dest_path = os.path.join(Preprocessor.OUTPUT_DATA_DEST_PATH, file_name + '_' + str(i).zfill(3) + '.png')
             fig.savefig(dest_path)
@@ -143,7 +149,7 @@ class Preprocessor:
 
 def main():
     preprocessor = Preprocessor()
-    preprocessor.preprocess(DATA_SRC_PATH)
+    preprocessor.preprocess(DATA_SRC_PATH, plot = False)
 
 if __name__ == '__main__':
     main()

@@ -2,19 +2,19 @@ import mido
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import scipy.misc
 
 from matplotlib.colors import colorConverter
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 
 class MidiFile(mido.MidiFile):
-    def __init__(self, filename, sr = 10, verbose = True):
+    def __init__(self, filename, sr = 1, verbose = True):
         mido.MidiFile.__init__(self, filename)
         self.verbose = verbose
         self.sr = sr
         self.meta = {}
         self._events = self._get_events()
         self._total_ticks = self._get_total_ticks()
+        self._length_seconds = self._get_length_seconds()
         self._roll = self._get_roll()
 
     def get_roll_image(self):
@@ -22,17 +22,6 @@ class MidiFile(mido.MidiFile):
         fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
         ax.axis('off')
         ax.set_facecolor('black')
-
-        # change unit of time axis from tick to second
-        second = mido.tick2second(self.total_ticks, self.ticks_per_beat, self.get_tempo())
-        if second > 10:
-            x_label_period_sec = second//10
-        else:
-            x_label_period_sec = second/10
-        x_label_interval = mido.second2tick(x_label_period_sec, self.ticks_per_beat, self.get_tempo())/self.sr
-
-        #plt.xticks([int(x*x_label_interval) for x in range(20)], [round(x*x_label_period_sec, 2) for x in range(20)])
-        #plt.yticks([y*16 for y in range(8)], [y*16 for y in range(8)])
 
         # build colors
         channel_nb = 16
@@ -52,6 +41,7 @@ class MidiFile(mido.MidiFile):
             try:
                 ax.imshow(self.roll[i], origin = 'lower', interpolation = 'nearest', cmap = cmaps[i], aspect = 'auto')
             except IndexError:
+                # TODO treat the error? can this even happen? who am I?
                 pass
 
         canvas = FigureCanvasAgg(fig)
@@ -126,50 +116,15 @@ class MidiFile(mido.MidiFile):
         plt.show()
 
     def save_roll(self, dest_path):
-        img = self.get_roll_image()
-        scipy.misc.imsave(dest_path, img)
-        return
-
         fig, ax = plt.subplots(1)
         fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
         ax.axis('off')
-        fig.imshow(img)
-        fig.savefig(dest_path, facecolor = 'black')
-        plt.close(fig)
-        return
-        # change unit of time axis from tick to second
-        second = mido.tick2second(self.total_ticks, self.ticks_per_beat, self.get_tempo())
-        if second > 10:
-            x_label_period_sec = second//10
-        else:
-            x_label_period_sec = second/10
-        x_label_interval = mido.second2tick(x_label_period_sec, self.ticks_per_beat, self.get_tempo())/self.sr
-        plt.xticks([int(x*x_label_interval) for x in range(20)], [round(x*x_label_period_sec, 2) for x in range(20)])
+        ax.set_facecolor('black')
 
-        # change scale and label of y axis
-        plt.yticks([y*16 for y in range(8)], [y*16 for y in range(8)])
-
-        # build colors
-        channel_nb = 16
-        transparent = colorConverter.to_rgba('black')
-        colors = [mpl.colors.to_rgba(mpl.colors.hsv_to_rgb((i/channel_nb, 1, 1)), alpha = 1) for i in range(channel_nb)]
-        cmaps = [mpl.colors.LinearSegmentedColormap.from_list('my_cmap', [transparent, colors[i]], 128) for i in range(channel_nb)]
-
-        # build color maps
-        for i in range(channel_nb):
-            cmaps[i]._init()
-            # create your alpha array and fill the colormap with them.
-            alphas = np.linspace(0, 1, cmaps[i].N + 3)
-            # create the _lut array, with rgba values
-            cmaps[i]._lut[:, -1] = alphas
-
-        for i in range(channel_nb):
-            try:
-                ax.imshow(self.roll[i], origin = 'lower', interpolation = 'nearest', cmap = cmaps[i], aspect = 'auto')
-            except IndexError:
-                pass
-
-        fig.savefig(dest_path, facecolor = 'black')
+        img = self.get_roll_image()
+        ax.imshow(img, aspect = 'auto')
+        fig.savefig(dest_path)
+        
         plt.close(fig)
 
     def get_tempo(self):
@@ -270,6 +225,9 @@ class MidiFile(mido.MidiFile):
                 max_ticks = ticks
         return max_ticks
 
+    def _get_length_seconds(self):
+        return int(mido.tick2second(self.total_ticks, self.ticks_per_beat, self.get_tempo())) + 1
+
     def _get_events(self):
         if self.verbose:
             print(self)
@@ -304,6 +262,10 @@ class MidiFile(mido.MidiFile):
     @property
     def total_ticks(self):
         return self._total_ticks
+
+    @property
+    def length_seconds(self):
+        return self._length_seconds
 
     @property
     def events(self):

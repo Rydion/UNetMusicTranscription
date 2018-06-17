@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from scipy import signal
-from src.utils import utils
+from utils import utils
 
 class Spectrogram:
     @staticmethod
