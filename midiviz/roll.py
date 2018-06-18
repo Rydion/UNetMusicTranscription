@@ -119,7 +119,7 @@ class MidiFile(mido.MidiFile):
         fig, ax = plt.subplots(1)
         fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
         ax.axis('off')
-        ax.set_facecolor('black')
+        ax.set_facecolor('black') #TODO not working
 
         img = self.get_roll_image()
         ax.imshow(img, aspect = 'auto')
@@ -136,6 +136,7 @@ class MidiFile(mido.MidiFile):
 
     def get_chunk_generator(self, chunk_length):
         img = self.get_roll_image()
+        print(np.shape(img))
         for i in range(0, np.shape(img)[1], chunk_length):
             yield img[:, i:i + chunk_length]
 
@@ -226,7 +227,12 @@ class MidiFile(mido.MidiFile):
         return max_ticks
 
     def _get_length_seconds(self):
-        return int(mido.tick2second(self.total_ticks, self.ticks_per_beat, self.get_tempo())) + 1
+        seconds = mido.tick2second(self.total_ticks, self.ticks_per_beat, self.get_tempo())
+        # Not super robust I know
+        if seconds.is_integer():
+            return int(seconds)
+
+        return int(seconds) + 1
 
     def _get_events(self):
         if self.verbose:

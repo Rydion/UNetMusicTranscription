@@ -27,13 +27,24 @@ class Preprocessor:
     SFFT_WINDOW_LENGTH = 1024
     SFFT_STRIDE = 768 #SFFT_WINDOW_LENGTH//2
 
+    @staticmethod
+    def calc_rounded_slice_length(num, dem):
+        '''
+            We calculate the closest that would give a remainder of 0.
+            This way we avoid weird results when slicing the spectrogram.
+            We will end up with N or N - 1 slices (where N is the number of slices if num%dem == 0).
+        '''
+        remainder = num%dem
+        remainder = dem - remainder
+        true_len = num + remainder
+        return true_len//dem
+
     def preprocess(self, dir_path, plot = False):
-        self._create_output_folders()
+        self._create_data_dirs()
 
         # TODO break this function up with auxiliary ones
         # Generate spectrogram slices for all wav files (input)
         for file in os.listdir(dir_path):
-            break
             file_name, file_extension = os.path.splitext(file)
             if file_extension != '.wav':
                 continue
@@ -57,7 +68,7 @@ class Preprocessor:
             if plot:
                 spectrogram.plot()
 
-            slice_length = len(spectrogram.times)//AudioReader.calc_signal_length_seconds(samples, sample_rate)
+            slice_length = Preprocessor.calc_rounded_slice_length(len(spectrogram.times), AudioReader.calc_signal_length_seconds(samples, sample_rate))
             self._save_sliced_spectrogram(spectrogram, file_name, slice_length)
 
             print()
@@ -76,16 +87,13 @@ class Preprocessor:
             if plot:
                 mid.draw_roll(draw_colorbar = False)
 
-            print(np.shape(mid.get_roll_image()))
-            print(mid.length_seconds)
-            slice_length = np.shape(mid.get_roll_image())[1]//mid.length_seconds # TODO numerator is not correct
-            print(slice_length)
+            slice_length = Preprocessor.calc_rounded_slice_length(np.shape(mid.get_roll_image())[1], mid.length_seconds)
             self._save_sliced_piano_roll(mid, file_name, slice_length)
 
             print()
             break
 
-    def _create_output_folders(self):
+    def _create_data_dirs(self):
         if not os.path.exists(Preprocessor.INPUT_DATA_DEST_PATH):
             os.makedirs(Preprocessor.INPUT_DATA_DEST_PATH)
 
@@ -93,6 +101,8 @@ class Preprocessor:
             os.makedirs(Preprocessor.OUTPUT_DATA_DEST_PATH)
 
     def _save_sliced_spectrogram(self, spectrogram, file_name, slice_length):
+        print(np.shape(spectrogram.values)[1]//slice_length)
+
         fig, ax = plt.subplots(1, figsize = (4, 16), dpi = 32)
         fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
         ax.axis('off')
@@ -117,6 +127,8 @@ class Preprocessor:
         plt.close(fig)
 
     def _save_sliced_piano_roll(self, mid, file_name, slice_length):
+        print(np.shape(mid.get_roll_image())[1]//slice_length)
+
         fig, ax = plt.subplots(1, figsize = (4, 16), dpi = 32)
         fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
 
@@ -128,7 +140,7 @@ class Preprocessor:
                 
             ax.clear()
             ax.axis('off')
-            ax.imshow(c, aspect='auto')
+            ax.imshow(c, aspect = 'auto')
 
             dest_path = os.path.join(Preprocessor.OUTPUT_DATA_DEST_PATH, file_name + '_' + str(i).zfill(3) + '.png')
             fig.savefig(dest_path)
