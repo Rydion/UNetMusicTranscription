@@ -8,7 +8,7 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 
-from midiviz import roll
+from midiviz.midiviz import MidiFile
 from utils.AudioReader import AudioReader
 from utils.Spectrogram import Spectrogram
 
@@ -65,6 +65,7 @@ class Preprocessor:
                 window_length = Preprocessor.SFFT_WINDOW_LENGTH,
                 stride = Preprocessor.SFFT_STRIDE
             )
+            self._save_spectrogram(spectrogram, file_name + '.png')
             if plot:
                 spectrogram.plot()
 
@@ -72,7 +73,6 @@ class Preprocessor:
             self._save_sliced_spectrogram(spectrogram, file_name, slice_length)
 
             print()
-            break
         
         # Generate visualization slices for all mid files (output)
         for file in os.listdir(dir_path):
@@ -82,7 +82,7 @@ class Preprocessor:
 
             print('Generating piano roll for %s.' % file)
 
-            mid = roll.MidiFile(os.path.join(dir_path, file), verbose = False)
+            mid = MidiFile(os.path.join(dir_path, file), verbose = False)
             mid.save_roll(os.path.join(Preprocessor.OUTPUT_DATA_DEST_PATH, file_name + '.png'))
             if plot:
                 mid.draw_roll(draw_colorbar = False)
@@ -91,7 +91,6 @@ class Preprocessor:
             self._save_sliced_piano_roll(mid, file_name, slice_length)
 
             print()
-            break
 
     def _create_data_dirs(self):
         if not os.path.exists(Preprocessor.INPUT_DATA_DEST_PATH):
@@ -155,7 +154,7 @@ class Preprocessor:
         fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
         ax.axis('off')
         ax.pcolormesh(spectrogram.times, spectrogram.frequencies, spectrogram.values)
-        dest_path = os.path.join(Preprocessor.INPUT_DATA_DEST_PATH, file_name + '.png')
+        dest_path = os.path.join(Preprocessor.INPUT_DATA_DEST_PATH, file_name)
         fig.savefig(dest_path)
         plt.close(fig)
 

@@ -21,7 +21,7 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="midiviz\roll.py" />
+    <Compile Include="midiviz\midiviz.py" />
     <Compile Include="midiviz\__init__.py" />
     <Compile Include="preprocess.py" />
     <Compile Include="tests\fast_run.py" />
@@ -53,17 +53,6 @@
     <Content Include="data\raw\MIREX\o.mid" />
     <Content Include="data\raw\MIREX\o.wav" />
     <Content Include="data\raw\MIREX\README" />
-    <Content Include="src\tf_unet\image_gen.py" />
-    <Content Include="src\tf_unet\image_util.py" />
-    <Content Include="src\tf_unet\__init__.py" />
-    <Content Include="src\unet\Trainer.py" />
-    <Content Include="src\unet\Unet.py" />
-    <Content Include="src\unet\util.py" />
-    <Content Include="src\unet\__init__.py" />
-    <Content Include="src\utils\AudioReader.py" />
-    <Content Include="src\utils\Spectrogram.py" />
-    <Content Include="src\utils\utils.py" />
-    <Content Include="src\utils\__init__.py" />
     <Content Include="LICENSE" />
     <Content Include="README.md" />
   </ItemGroup>
@@ -73,10 +62,6 @@
     <Folder Include="data\raw\" />
     <Folder Include="data\raw\MIREX\" />
     <Folder Include="midiviz\" />
-    <Folder Include="src\" />
-    <Folder Include="src\tf_unet\" />
-    <Folder Include="src\unet\" />
-    <Folder Include="src\utils\" />
     <Folder Include="tests\" />
     <Folder Include="tf_unet\" />
     <Folder Include="unet\" />
