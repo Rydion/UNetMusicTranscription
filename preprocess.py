@@ -1,5 +1,6 @@
 '''
-created on 2018-06-14
+created: 2018-06-14
+edited: 2018-07-03
 author: Adrian Hintze @Rydion
 '''
 
@@ -19,10 +20,8 @@ DATA_SRC_PATH = './data/raw/MIREX/'
 #       implement q-transform as an alternative to SFFT
 #       use logging instead of prints
 
-
 class Preprocessor:
-    INPUT_DATA_DEST_PATH = './data/preprocessed/MIREX/input'
-    OUTPUT_DATA_DEST_PATH = './data/preprocessed/MIREX/output'
+    DATA_DEST_PATH = './data/preprocessed/MIREX/'
     DOWNSAMPLE_RATE = 8192 #Hz
     SFFT_WINDOW_LENGTH = 1024
     SFFT_STRIDE = 768 #SFFT_WINDOW_LENGTH//2
@@ -39,7 +38,7 @@ class Preprocessor:
         true_len = num + remainder
         return true_len//dem
 
-    def preprocess(self, dir_path, plot = False):
+    def preprocess(self, dir_path, plot = False, save_full = False):
         self._create_data_dirs()
 
         # TODO break this function up with auxiliary ones
@@ -65,7 +64,8 @@ class Preprocessor:
                 window_length = Preprocessor.SFFT_WINDOW_LENGTH,
                 stride = Preprocessor.SFFT_STRIDE
             )
-            self._save_spectrogram(spectrogram, file_name + '.png')
+            if save_full:
+                self._save_spectrogram(spectrogram, file_name + '.png')
             if plot:
                 spectrogram.plot()
 
@@ -83,7 +83,8 @@ class Preprocessor:
             print('Generating piano roll for %s.' % file)
 
             mid = MidiFile(os.path.join(dir_path, file), verbose = False)
-            mid.save_roll(os.path.join(Preprocessor.OUTPUT_DATA_DEST_PATH, file_name + '.png'))
+            if save_full:
+                mid.save_roll(os.path.join(Preprocessor.DATA_DEST_PATH, file_name + '.png'))
             if plot:
                 mid.draw_roll(draw_colorbar = False)
 
@@ -93,11 +94,8 @@ class Preprocessor:
             print()
 
     def _create_data_dirs(self):
-        if not os.path.exists(Preprocessor.INPUT_DATA_DEST_PATH):
-            os.makedirs(Preprocessor.INPUT_DATA_DEST_PATH)
-
-        if not os.path.exists(Preprocessor.OUTPUT_DATA_DEST_PATH):
-            os.makedirs(Preprocessor.OUTPUT_DATA_DEST_PATH)
+        if not os.path.exists(Preprocessor.DATA_DEST_PATH):
+            os.makedirs(Preprocessor.DATA_DEST_PATH)
 
     def _save_sliced_spectrogram(self, spectrogram, file_name, slice_length):
         print(np.shape(spectrogram.values)[1]//slice_length)
@@ -118,7 +116,7 @@ class Preprocessor:
                 spectrogram.frequencies,
                 c
             )
-            dest_path = os.path.join(Preprocessor.INPUT_DATA_DEST_PATH, file_name + '_' + str(i).zfill(3) + '.png')
+            dest_path = os.path.join(Preprocessor.DATA_DEST_PATH, file_name + '_' + str(i).zfill(3) + '_in.png')
             fig.savefig(dest_path)
         end = time.clock()
         print('Saved all spectrogram slices in %.2f seconds.' % (end - start))
@@ -126,8 +124,6 @@ class Preprocessor:
         plt.close(fig)
 
     def _save_sliced_piano_roll(self, mid, file_name, slice_length):
-        print(np.shape(mid.get_roll_image())[1]//slice_length)
-
         fig, ax = plt.subplots(1, figsize = (4, 16), dpi = 32)
         fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
 
@@ -141,20 +137,19 @@ class Preprocessor:
             ax.axis('off')
             ax.imshow(c, aspect = 'auto')
 
-            dest_path = os.path.join(Preprocessor.OUTPUT_DATA_DEST_PATH, file_name + '_' + str(i).zfill(3) + '.png')
+            dest_path = os.path.join(Preprocessor.DATA_DEST_PATH, file_name + '_' + str(i).zfill(3) + '_out.png')
             fig.savefig(dest_path)
         end = time.clock()
         print('Saved all piano roll slices in %.2f seconds.' % (end - start))
 
         plt.close(fig)
 
-
     def _save_spectrogram(self, spectrogram, file_name):
         fig, ax = plt.subplots(1, figsize = (4, 16), dpi = 32)
         fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
         ax.axis('off')
         ax.pcolormesh(spectrogram.times, spectrogram.frequencies, spectrogram.values)
-        dest_path = os.path.join(Preprocessor.INPUT_DATA_DEST_PATH, file_name)
+        dest_path = os.path.join(Preprocessor.DATA_DEST_PATH, file_name)
         fig.savefig(dest_path)
         plt.close(fig)
 

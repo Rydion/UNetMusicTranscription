@@ -1,9 +1,8 @@
 '''
-created on 2018-05-31
+created: 2018-05-31
+edited: 2018-07-03
 author: Adrian Hintze @Rydion
 '''
-
-from __future__ import division, print_function
 
 import shutil
 import tensorflow as tf
@@ -13,19 +12,31 @@ import matplotlib.pyplot as plt
 
 from unet.Unet import Unet
 from unet.Trainer import Trainer
-from tf_unet import image_gen
+from tf_unet.image_util import ImageDataProvider
 
 plt.rcParams['image.cmap'] = 'gist_earth'
 
+TRAINING_DATA_DIR = './data/preprocessed/MIREX/*.png'
 
 def test():
-    nx = 300
-    ny = nx
-
-    generator = image_gen.GrayScaleDataProvider(nx, ny, cnt = 20)
-    net = Unet(num_channels = generator.channels, num_classes = generator.n_class, layers = 3, features_root = 16)
-    trainer = Trainer(net, opt_kwargs = dict(momentum = 0.2))
-    path = trainer.train(generator, './unet_trained', epochs = 1)
+    data_provider = ImageDataProvider(TRAINING_DATA_DIR, data_suffix = '_in.png', mask_suffix = '_out.png')
+    print(data_provider.channels)
+    net = Unet(
+        num_channels = data_provider.channels, 
+        num_classes = data_provider.n_class, 
+        layers = 3, 
+        features_root = 64,
+        cost_kwargs = dict(regularizer = 0.001),
+    )
+    trainer = Trainer(net, optimizer = 'momentum', opt_kwargs = dict(momentum = 0.2))
+    path = trainer.train(
+        data_provider,
+        './unet_trained',
+        training_iters = 32,
+        epochs = 1,
+        dropout = 0.5,
+        display_step = 2
+    )
 
 def init():
     tf.reset_default_graph()

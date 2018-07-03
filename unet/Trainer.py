@@ -1,9 +1,8 @@
 '''
-Created on 2018-06-06
+created: 2018-06-06
+created: 2018-07-03
 author: Adrian Hintze @Rydion
 '''
-
-from __future__ import print_function, division, absolute_import, unicode_literals
 
 import os
 import logging
@@ -12,7 +11,6 @@ import numpy as np
 import tensorflow as tf
 
 from unet.util import crop_to_shape, combine_img_prediction, save_image
-
 
 class Trainer(object):
     verification_batch_size = 4
@@ -28,14 +26,14 @@ class Trainer(object):
         self.optimizer = optimizer
         self.opt_kwargs = opt_kwargs
 
-    def train(self, data_provider, output_path, trainingIters = 10, epochs = 100, dropout = 0.75, displayStep = 1, restore = False, writeGraph = False, predictionPath = 'prediction'):
+    def train(self, data_provider, output_path, training_iters = 10, epochs = 100, dropout = 0.75, display_step = 1, restore = False, write_graph = False, prediction_path = 'prediction'):
         save_path = os.path.join(output_path, 'model.ckpt')
         if epochs == 0:
             return save_path
 
-        init = self._initialize(trainingIters, output_path, restore, predictionPath)
+        init = self._initialize(training_iters, output_path, restore, prediction_path)
         with tf.Session() as sess:
-            if writeGraph:
+            if write_graph:
                 tf.train.write_graph(sess.graph_def, output_path, 'graph.pb', False)
             
             sess.run(init)
@@ -54,7 +52,7 @@ class Trainer(object):
             avg_gradients = None
             for epoch in range(epochs):
                 total_loss = 0
-                for step in range((epoch*trainingIters), ((epoch + 1)*trainingIters)):
+                for step in range((epoch*training_iters), ((epoch + 1)*training_iters)):
                     x_batch, y_batch = data_provider(self.batch_size)
 
                     # Run optimization op (backprop)
@@ -67,7 +65,7 @@ class Trainer(object):
                         }
                     )
 
-                    if step % displayStep == 0:
+                    if step % display_step == 0:
                         self.output_minibatch_stats(
                             sess,
                             summary_writer,
@@ -78,7 +76,7 @@ class Trainer(object):
 
                     total_loss += loss
 
-                self.output_epoch_stats(epoch, total_loss, trainingIters, lr)
+                self.output_epoch_stats(epoch, total_loss, training_iters, lr)
                 self.store_prediction(sess, x_test, y_test, 'epoch_%s' % epoch)
 
                 save_path = self.net.save(sess, save_path)

@@ -1,3 +1,9 @@
+'''
+created: 2018-06-20
+edited: 2018-07-03
+author: Adrian Hintze @Rydion
+'''
+
 import mido
 import numpy as np
 import matplotlib as mpl
@@ -285,8 +291,8 @@ if __name__ == '__main__':
     # get the list of all events
     events = mid.events
 
-    # get the np array of piano roll image
-    roll = mid.get_roll()
+    # get the matrix representing the piano roll
+    roll = mid.roll
 
-    # draw piano roll by pyplot
+    # draw piano roll
     mid.draw_roll(draw_colorbar = False)

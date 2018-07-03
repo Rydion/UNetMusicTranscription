@@ -1,5 +1,6 @@
 '''
-created on 2018-05-31
+created: 2018-05-31
+edited: 2018-07-03
 author: Adrian Hintze @Rydion
 '''
 
@@ -216,3 +217,7 @@ class Unet:
             loss += regularizer*regularizers
 
         return loss
+
+    @property
+    def variables(self):
+        return self._variables
