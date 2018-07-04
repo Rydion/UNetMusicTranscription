@@ -1,6 +1,6 @@
 ## Project specific ##
-prediction/
-unet_trained/
+prediction*/
+unet_trained*/
 data/preprocessed/
 
 

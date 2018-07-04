@@ -24,9 +24,20 @@
     <Compile Include="midiviz\midiviz.py" />
     <Compile Include="midiviz\__init__.py" />
     <Compile Include="preprocess.py" />
+    <Compile Include="scripts\launcher.py" />
+    <Compile Include="scripts\radio_util.py" />
+    <Compile Include="scripts\rfi_launcher.py" />
+    <Compile Include="scripts\ufig_launcher.py" />
+    <Compile Include="scripts\ufig_util.py" />
+    <Compile Include="scripts\ultrasound_launcher.py" />
+    <Compile Include="scripts\ultrasound_util.py" />
+    <Compile Include="scripts\__init__.py" />
     <Compile Include="tests\fast_run.py" />
     <Compile Include="tf_unet\image_gen.py" />
     <Compile Include="tf_unet\image_util.py" />
+    <Compile Include="tf_unet\layers.py" />
+    <Compile Include="tf_unet\unet.py" />
+    <Compile Include="tf_unet\util.py" />
     <Compile Include="tf_unet\__init__.py" />
     <Compile Include="unet\Trainer.py" />
     <Compile Include="unet\Unet.py" />
@@ -55,6 +66,7 @@
     <Content Include="data\raw\MIREX\README" />
     <Content Include="LICENSE" />
     <Content Include="README.md" />
+    <Content Include="scripts\.gitignore" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="data\" />
@@ -62,6 +74,7 @@
     <Folder Include="data\raw\" />
     <Folder Include="data\raw\MIREX\" />
     <Folder Include="midiviz\" />
+    <Folder Include="scripts\" />
     <Folder Include="tests\" />
     <Folder Include="tf_unet\" />
     <Folder Include="unet\" />

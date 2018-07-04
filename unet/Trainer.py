@@ -1,6 +1,6 @@
 '''
 created: 2018-06-06
-created: 2018-07-03
+edited: 2018-07-04
 author: Adrian Hintze @Rydion
 '''
 
@@ -26,7 +26,7 @@ class Trainer(object):
         self.optimizer = optimizer
         self.opt_kwargs = opt_kwargs
 
-    def train(self, data_provider, output_path, training_iters = 10, epochs = 100, dropout = 0.75, display_step = 1, restore = False, write_graph = False, prediction_path = 'prediction'):
+    def train(self, data_provider, output_path, training_iters = 10, epochs = 100, dropout = 0.75, restore = False, write_graph = False, prediction_path = 'prediction'):
         save_path = os.path.join(output_path, 'model.ckpt')
         if epochs == 0:
             return save_path
@@ -65,18 +65,8 @@ class Trainer(object):
                         }
                     )
 
-                    if step % display_step == 0:
-                        self.output_minibatch_stats(
-                            sess,
-                            summary_writer,
-                            step,
-                            x_batch,
-                            crop_to_shape(y_batch, pred_shape)
-                        )
-
                     total_loss += loss
 
-                self.output_epoch_stats(epoch, total_loss, training_iters, lr)
                 self.store_prediction(sess, x_test, y_test, 'epoch_%s' % epoch)
 
                 save_path = self.net.save(sess, save_path)
@@ -109,26 +99,6 @@ class Trainer(object):
         save_image(img, '%s/%s.jpg' % (self.prediction_path, name))
         return pred_shape
 
-    def output_epoch_stats(self, epoch, total_loss, training_iters, lr):
-        logging.info('Epoch {:}, Average loss: {:.4f}, learning rate: {:.4f}'.format(epoch, (total_loss/training_iters), lr))
-
-    def output_minibatch_stats(self, sess, summary_writer, step, x_batch, y_batch):
-        summary_str, loss, acc, predictions = sess.run([
-                self.summary_op,
-                self.net.cost,
-                self.net.accuracy,
-                self.net.predicter
-            ],
-            feed_dict = {
-                self.net.x: x_batch,
-                self.net.y: y_batch,
-                self.net.keep_prob: 1.0
-            }
-        )
-        summary_writer.add_summary(summary_str, step)
-        summary_writer.flush()
-        logging.info('Iter {:}, Minibatch Loss= {:.4f}, Training Accuracy= {:.4f}, Minibatch error= {:.1f}%'.format(step, loss, acc, Trainer.error_rate(predictions, y_batch)))
-
     def _getOptimizer(self, training_iters, global_step):
         if self.optimizer == 'momentum':
             learning_rate = self.opt_kwargs.pop('learning_rate', 0.2)
@@ -147,7 +117,7 @@ class Trainer(object):
                 learning_rate = self.learning_rate_node,
                 momentum = momentum,
                 **self.opt_kwargs
-            ) \
+            )\
             .minimize(
                 self.net.cost,
                 global_step = global_step
@@ -159,7 +129,7 @@ class Trainer(object):
             return tf.train.AdamOptimizer(
                 learning_rate = self.learning_rate_node,
                 **self.opt_kwargs
-            ) \
+            )\
             .minimize(
                 self.net.cost,
                 global_step = global_step

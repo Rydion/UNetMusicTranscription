@@ -1,16 +1,13 @@
 '''
 created: 2018-05-31
-edited: 2018-07-03
+edited: 2018-07-04
 author: Adrian Hintze @Rydion
 '''
-
-from __future__ import print_function, division, absolute_import, unicode_literals
 
 import numpy as np
 import tensorflow as tf
 
 from collections import OrderedDict
-
 
 class Unet:
     @staticmethod
