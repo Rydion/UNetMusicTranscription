@@ -9,16 +9,26 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 
+from PIL import Image
 from midiviz.midiviz import MidiFile
 from utils.AudioReader import AudioReader
 from utils.Spectrogram import Spectrogram
 
 DATA_SRC_PATH = './data/raw/MIREX/'
+IMAGE_FORMAT = '.png'
 
 # TODO: debug
 #       make the size of the output/input pair images a parameter
 #       implement q-transform as an alternative to SFFT
 #       use logging instead of prints
+
+def grey_scale(img):
+    return np.dot(img[..., :3], [0.299, 0.587, 0.114])
+
+def binarize(img, threshold):
+    img = grey_scale(img)
+    img = img.astype(np.uint8)
+    return np.where(img > threshold, 255, 0)
 
 class Preprocessor:
     DATA_DEST_PATH = './data/preprocessed/MIREX/'
@@ -65,7 +75,7 @@ class Preprocessor:
                 stride = Preprocessor.SFFT_STRIDE
             )
             if save_full:
-                self._save_spectrogram(spectrogram, file_name + '.png')
+                self._save_spectrogram(spectrogram, file_name + IMAGE_FORMAT)
             if plot:
                 spectrogram.plot()
 
@@ -84,7 +94,7 @@ class Preprocessor:
 
             mid = MidiFile(os.path.join(dir_path, file), verbose = False)
             if save_full:
-                mid.save_roll(os.path.join(Preprocessor.DATA_DEST_PATH, file_name + '.png'))
+                mid.save_roll(os.path.join(Preprocessor.DATA_DEST_PATH, file_name + IMAGE_FORMAT))
             if plot:
                 mid.draw_roll(draw_colorbar = False)
 
@@ -92,6 +102,13 @@ class Preprocessor:
             self._save_sliced_piano_roll(mid, file_name, slice_length)
 
             print()
+
+        # Transform into BMP to get rid of transparencies
+        for file in os.listdir(Preprocessor.DATA_DEST_PATH):
+            file_name, _ = os.path.splitext(file)
+            img = Image.open(os.path.join(Preprocessor.DATA_DEST_PATH, file))
+            out_file = os.path.join(Preprocessor.DATA_DEST_PATH, file_name + '.bmp')
+            img.save(out_file)
 
     def _create_data_dirs(self):
         if not os.path.exists(Preprocessor.DATA_DEST_PATH):
@@ -107,6 +124,9 @@ class Preprocessor:
         start = time.clock()
         chunks = spectrogram.get_chunk_generator(slice_length)
         for i, c in enumerate(chunks):
+            # REMOVE
+            if i > 48:
+                break
             # Don't save the last slice if it has a different size from the rest
             if np.shape(c)[1] < slice_length:
                 break
@@ -116,8 +136,8 @@ class Preprocessor:
                 spectrogram.frequencies,
                 c
             )
-            dest_path = os.path.join(Preprocessor.DATA_DEST_PATH, file_name + '_' + str(i).zfill(3) + '_in.png')
-            fig.savefig(dest_path)
+            dest_path = os.path.join(Preprocessor.DATA_DEST_PATH, file_name + '_' + str(i).zfill(3) + '_in' + IMAGE_FORMAT)
+            fig.savefig(dest_path, frameon = True)
         end = time.clock()
         print('Saved all spectrogram slices in %.2f seconds.' % (end - start))
 
@@ -130,15 +150,21 @@ class Preprocessor:
         start = time.clock()
         chunks = mid.get_chunk_generator(slice_length)
         for i, c in enumerate(chunks):
+            # REMOVE
+            if i > 48:
+                break
+            # Don't save the last slice if it has a different size from the rest
             if np.shape(c)[1] < slice_length:
                 break
                 
             ax.clear()
             ax.axis('off')
-            ax.imshow(c, aspect = 'auto')
 
-            dest_path = os.path.join(Preprocessor.DATA_DEST_PATH, file_name + '_' + str(i).zfill(3) + '_out.png')
-            fig.savefig(dest_path)
+            c = binarize(c, 200)
+            ax.imshow(c, aspect = 'auto', cmap = plt.cm.gray)
+
+            dest_path = os.path.join(Preprocessor.DATA_DEST_PATH, file_name + '_' + str(i).zfill(3) + '_out' + IMAGE_FORMAT)
+            fig.savefig(dest_path, frameon = True)
         end = time.clock()
         print('Saved all piano roll slices in %.2f seconds.' % (end - start))
 
@@ -150,7 +176,7 @@ class Preprocessor:
         ax.axis('off')
         ax.pcolormesh(spectrogram.times, spectrogram.frequencies, spectrogram.values)
         dest_path = os.path.join(Preprocessor.DATA_DEST_PATH, file_name)
-        fig.savefig(dest_path)
+        fig.savefig(dest_path, frameon = True)
         plt.close(fig)
 
 def main():

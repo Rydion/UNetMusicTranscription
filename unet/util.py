@@ -1,9 +1,8 @@
 '''
-Created on 2018-06-08
+created: 2018-06-08
+edited: 2018-07-04
 author: Adrian Hintze @Rydion
 '''
-
-from __future__ import print_function, division, absolute_import, unicode_literals
 
 import numpy as np
 

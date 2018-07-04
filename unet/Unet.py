@@ -83,6 +83,24 @@ class Unet:
         save_path = saver.save(sess, model_path)
         return save_path
 
+    def predict(self, model_path, x_test):
+        init = tf.global_variables_initializer()
+        with tf.Session() as sess:
+            # Initialize variables
+            sess.run(init)
+
+            # Restore model weights from previously saved model
+            self._restore(sess, model_path)
+
+            y_dummy = np.empty((x_test.shape[0], x_test.shape[1], x_test.shape[2], self._num_classes))
+            prediction = sess.run(self.predicter, feed_dict = {self.x: x_test, self.y: y_dummy, self.keep_prob: 1.0})
+
+        return prediction
+
+    def _restore(self, sess, model_path):
+        saver = tf.train.Saver()
+        saver.restore(sess, model_path)
+
     def _init(self, layers = 3, features_root = 16, filter_size = 3, pool_size = 2):
         nx = tf.shape(self.x)[1]
         ny = tf.shape(self.x)[2]
