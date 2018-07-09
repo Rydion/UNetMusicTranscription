@@ -32,7 +32,10 @@
     <Compile Include="scripts\ultrasound_launcher.py" />
     <Compile Include="scripts\ultrasound_util.py" />
     <Compile Include="scripts\__init__.py" />
-    <Compile Include="tests\fast_run.py" />
+    <Compile Include="tests\fast_test.py" />
+    <Compile Include="tests\toy_test.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="tf_unet\image_gen.py" />
     <Compile Include="tf_unet\image_util.py" />
     <Compile Include="tf_unet\layers.py" />
