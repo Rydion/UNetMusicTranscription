@@ -48,7 +48,7 @@ class Preprocessor:
         true_len = num + remainder
         return true_len//dem
 
-    def preprocess(self, dir_path, plot = False, save_full = False):
+    def preprocess(self, dir_path, gen_bmp = False, plot = False, save_full = False):
         self._create_data_dirs()
 
         # TODO break this function up with auxiliary ones
@@ -103,12 +103,31 @@ class Preprocessor:
 
             print()
 
-        # Transform into BMP to get rid of transparencies
+        # Transform into BMP to get rid of alpha channel
+        if gen_bmp:
+            for file in os.listdir(Preprocessor.DATA_DEST_PATH):
+                file_name, _ = os.path.splitext(file)
+                img = Image.open(os.path.join(Preprocessor.DATA_DEST_PATH, file))
+                out_file = os.path.join(Preprocessor.DATA_DEST_PATH, file_name + '.bmp')
+                img.save(out_file)
+
+    def one_hot_encode(self):
         for file in os.listdir(Preprocessor.DATA_DEST_PATH):
-            file_name, _ = os.path.splitext(file)
-            img = Image.open(os.path.join(Preprocessor.DATA_DEST_PATH, file))
-            out_file = os.path.join(Preprocessor.DATA_DEST_PATH, file_name + '.bmp')
-            img.save(out_file)
+            file_name, file_extension = os.path.splitext(file)
+            if file_extension == '.bmp':
+                if file_name[-1] == 'n':
+                    continue
+
+                img = Image.open(os.path.join(Preprocessor.DATA_DEST_PATH, file))
+                img = np.array(img)
+                for row in img:
+                    for col in row:
+                        if col[0] == 255:
+                            col[0] = col[1] = col[2] = 1
+
+                img = Image.fromarray(img)
+                out_file = os.path.join(Preprocessor.DATA_DEST_PATH, file_name + '_hot.bmp')
+                img.save(out_file)
 
     def _create_data_dirs(self):
         if not os.path.exists(Preprocessor.DATA_DEST_PATH):
@@ -181,7 +200,7 @@ class Preprocessor:
 
 def main():
     preprocessor = Preprocessor()
-    preprocessor.preprocess(DATA_SRC_PATH, plot = False)
+    preprocessor.preprocess(DATA_SRC_PATH, gen_bmp = False, plot = False)
 
 if __name__ == '__main__':
     main()

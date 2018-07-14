@@ -5,34 +5,46 @@ author: Adrian Hintze @Rydion
 '''
 
 import shutil
-import tensorflow as tf
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
-#from unet.Unet import Unet
-#from unet.Trainer import Trainer
-
 from tf_unet.unet import Unet, Trainer
 from tf_unet.image_util import ImageDataProvider
 
-plt.rcParams['image.cmap'] = 'gist_earth'
+#plt.rcParams['image.cmap'] = 'gist_earth'
+np.random.seed(98765)
 
 IMAGE_FORMAT = '.bmp'
-TRAINING_DATA_DIR = './data/preprocessed/MIREX/*' + IMAGE_FORMAT
+TRAINING_DATA_DIR = './data/preprocessed/MIREX/*'
+data_suffix = '_in' + IMAGE_FORMAT
+mask_suffix = '_out' + IMAGE_FORMAT
+EPOCHS = 50
 
 def train():
     data_provider = ImageDataProvider(
         TRAINING_DATA_DIR,
-        data_suffix = '_in' + IMAGE_FORMAT,
-        mask_suffix = '_out' + IMAGE_FORMAT,
-        n_class = 3
+        data_suffix = data_suffix,
+        mask_suffix = mask_suffix
     )
+
+    x, y = data_provider(1)
+    '''
+    print(np.shape(x))
+    print(np.shape(y))
+    print(np.amin(x))
+    print(np.amax(x))
+    print(np.amin(y))
+    print(np.amax(y))
+    print(data_provider.channels)
+    print(data_provider.n_class)
+    '''
+
     net = Unet(
         channels = data_provider.channels,
         n_class = data_provider.n_class,
         layers = 3,
-        cost_kwargs = dict(regularizer = 0.001)
+        features_root = 16
     )
     trainer = Trainer(
         net,
@@ -43,17 +55,20 @@ def train():
         data_provider,
         './unet_trained_fast',
         prediction_path = './prediction_fast',
-        epochs = 1
+        epochs = EPOCHS,
+        display_step = 2
     )
 
     return net, path
 
 def predict(net, path):
-    data_provider = ImageDataProvider(TRAINING_DATA_DIR, data_suffix = '_in' + IMAGE_FORMAT, mask_suffix = '_out' + IMAGE_FORMAT, n_class = 3)
+    data_provider = ImageDataProvider(TRAINING_DATA_DIR, data_suffix = data_suffix, mask_suffix = mask_suffix)
     x, y = data_provider(1)
     prediction = net.predict(path, x)
 
-    print(prediction)
+    print(np.shape(x))
+    print(np.shape(y))
+    print(np.shape(prediction))
 
     fig, ax = plt.subplots(1, 3, figsize = (12, 4))
     ax[0].imshow(x[0, ..., 0], aspect = 'auto')
@@ -67,7 +82,7 @@ def test():
     predict(net, path)
 
 def init():
-    tf.reset_default_graph()
+    #tf.reset_default_graph()
 
     shutil.rmtree('./unet_trained_fast', ignore_errors = True)
     shutil.rmtree('./prediction', ignore_errors = True)
