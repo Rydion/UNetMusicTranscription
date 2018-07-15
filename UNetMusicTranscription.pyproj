@@ -21,6 +21,9 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="AlternativeImplementation.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="midiviz\midiviz.py" />
     <Compile Include="midiviz\__init__.py" />
     <Compile Include="preprocess.py" />
