@@ -13,13 +13,12 @@ from tf_unet.unet import Unet, Trainer
 from tf_unet.image_util import ImageDataProvider
 
 #plt.rcParams['image.cmap'] = 'gist_earth'
-np.random.seed(98765)
 
 IMAGE_FORMAT = '.bmp'
 TRAINING_DATA_DIR = './data/preprocessed/MIREX/*'
 data_suffix = '_in' + IMAGE_FORMAT
 mask_suffix = '_out' + IMAGE_FORMAT
-EPOCHS = 50
+EPOCHS = 20
 
 def train():
     data_provider = ImageDataProvider(
@@ -28,8 +27,14 @@ def train():
         mask_suffix = mask_suffix
     )
 
-    x, y = data_provider(1)
     '''
+    x, y = data_provider(1)
+    fig, ax = plt.subplots(1, 3, figsize = (12, 4))
+    ax[0].imshow(x[0, ..., 0], aspect = 'auto')
+    ax[1].imshow(y[0, ..., 1], aspect = 'auto', cmap = plt.cm.gray)
+    plt.draw()
+    plt.show()
+    
     print(np.shape(x))
     print(np.shape(y))
     print(np.amin(x))
@@ -39,6 +44,7 @@ def train():
     print(data_provider.channels)
     print(data_provider.n_class)
     '''
+    #return
 
     net = Unet(
         channels = data_provider.channels,
@@ -59,27 +65,43 @@ def train():
         display_step = 2
     )
 
-    return net, path
+    return net, data_provider
 
-def predict(net, path):
-    data_provider = ImageDataProvider(TRAINING_DATA_DIR, data_suffix = data_suffix, mask_suffix = mask_suffix)
+def predict(net, data_provider):
     x, y = data_provider(1)
-    prediction = net.predict(path, x)
+    prediction = net.predict('./unet_trained_fast/model.ckpt', x)
+    mask = np.zeros(np.shape(prediction), dtype = np.float32)
+    mask[:, :, 0] = prediction[:, :, 0] >= 0.5
+    mask[:, :, 1] = prediction[:, :, 1] >= 0.5
 
     print(np.shape(x))
     print(np.shape(y))
     print(np.shape(prediction))
+    print(np.shape(mask))
+    print(np.amin(x))
+    print(np.amax(x))
+    print(np.amin(y))
+    print(np.amax(y))
+    print(np.amin(prediction))
+    print(np.amax(prediction))
+    print(np.amin(mask))
+    print(np.amax(mask))
 
-    fig, ax = plt.subplots(1, 3, figsize = (12, 4))
+    fig, ax = plt.subplots(1, 4, figsize = (12, 4))
     ax[0].imshow(x[0, ..., 0], aspect = 'auto')
     ax[1].imshow(y[0, ..., 1], aspect = 'auto', cmap = plt.cm.gray)
     ax[2].imshow(prediction[0, ..., 1], aspect = 'auto', cmap = plt.cm.gray)
+    ax[3].imshow(mask[0, ..., 1], aspect = 'auto', cmap = plt.cm.gray)
+    ax[0].set_title("Input")
+    ax[1].set_title("Ground truth")
+    ax[2].set_title("Prediction")
+    ax[3].set_title("Mask")
     plt.draw()
     plt.show()
 
 def test():
-    net, path = train()
-    predict(net, path)
+    net, data_provider = train()
+    predict(net, data_provider)
 
 def init():
     #tf.reset_default_graph()

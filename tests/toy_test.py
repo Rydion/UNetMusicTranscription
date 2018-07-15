@@ -21,15 +21,25 @@ def train():
     ny = 572
 
     generator = image_gen.GrayScaleDataProvider(nx, ny, cnt = 20)
-    x_test, y_test = generator(1)
-    print(np.shape(x_test))
-    print(np.shape(y_test))
-    print(np.amin(x_test))
-    print(np.amax(x_test))
-    print(np.amin(y_test))
-    print(np.amax(y_test))
+
+    '''
+    x, y = generator(1)
+    fig, ax = plt.subplots(1, 3, figsize = (12, 4))
+    ax[0].imshow(x[0, ..., 0], aspect = 'auto')
+    ax[1].imshow(y[0, ..., 1], aspect = 'auto', cmap = plt.cm.gray)
+    plt.draw()
+    plt.show()
+
+    print(np.shape(x))
+    print(np.shape(y))
+    print(np.amin(x))
+    print(np.amax(x))
+    print(np.amin(y))
+    print(np.amax(y))
     print(generator.channels)
     print(generator.n_class)
+    '''
+    #return
 
     net = unet.Unet(
         channels = generator.channels,
@@ -54,18 +64,34 @@ def train():
     return net, generator
     
 def predict(net, generator):
-    x_test, y_test = generator(1)
-    prediction = net.predict('./unet_trained_toy/model.ckpt', x_test)
-    
-    fig, ax = plt.subplots(1, 3, sharex = True, sharey = True, figsize = (12, 5))
-    ax[0].imshow(x_test[0, ..., 0], aspect = 'auto')
-    ax[1].imshow(y_test[0, ..., 1], aspect = 'auto')
-    mask = prediction > 0.9
-    mask = prediction
-    ax[2].imshow(mask[0, ..., 1], aspect = 'auto')
+    x, y = generator(1)
+    prediction = net.predict('./unet_trained_toy/model.ckpt', x)
+    mask = np.zeros(np.shape(prediction), dtype = np.float32)
+    mask[:, :, 0] = prediction[:, :, 0] >= 0.5
+    mask[:, :, 1] = prediction[:, :, 1] >= 0.5
+
+    print(np.shape(x))
+    print(np.shape(y))
+    print(np.shape(prediction))
+    print(np.shape(mask))
+    print(np.amin(x))
+    print(np.amax(x))
+    print(np.amin(y))
+    print(np.amax(y))
+    print(np.amin(prediction))
+    print(np.amax(prediction))
+    print(np.amin(mask))
+    print(np.amax(mask))
+
+    fig, ax = plt.subplots(1, 4, sharex = True, sharey = True, figsize = (12, 5))
+    ax[0].imshow(x[0, ..., 0], aspect = 'auto')
+    ax[1].imshow(y[0, ..., 1], aspect = 'auto', cmap = plt.cm.gray)
+    ax[2].imshow(prediction[0, ..., 1], aspect = 'auto', cmap = plt.cm.gray)
+    ax[3].imshow(mask[0, ..., 1], aspect = 'auto', cmap = plt.cm.gray)
     ax[0].set_title("Input")
     ax[1].set_title("Ground truth")
     ax[2].set_title("Prediction")
+    ax[3].set_title("Mask")
     fig.tight_layout()
     plt.draw()
     plt.show()

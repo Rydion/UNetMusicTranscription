@@ -60,10 +60,15 @@ class BaseDataProvider(object):
             nx = label.shape[1]
             ny = label.shape[0]
             labels = np.zeros((ny, nx, self.n_class), dtype = np.float32)
-            for i, r in enumerate(label):
-                for j, c in enumerate(r):
-                    labels[i, j, 0] = np.asscalar(~c[0]*1.0)
-                    labels[i, j, 1] = np.asscalar(c[0]*1.0)
+
+            if np.isscalar(label[0, 0]):
+                labels[..., 1] = label
+                labels[..., 0] = ~label
+            else:
+                for i, r in enumerate(label):
+                    for j, c in enumerate(r):
+                        labels[i, j, 0] = np.asscalar(~c[0]*1.0)
+                        labels[i, j, 1] = np.asscalar(c[0]*1.0)
             #labels[..., 1] = label#[..., 1]
             #labels[..., 0] = ~label#[..., 0]
             '''
