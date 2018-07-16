@@ -26,7 +26,7 @@ class BaseDataProvider(object):
     Abstract base class for DataProvider implementation. Subclasses have to
     overwrite the `_next_data` method that load the next data and label array.
     This implementation automatically clips the data with the given min/max and
-    normalizes the values to (0,1]. To change this behavior the `_process_data`
+    normalizes the values to (0,1]. To change this behavoir the `_process_data`
     method can be overwritten. To enable some post processing such as data
     augmentation the `_post_process` method can be overwritten.
 
@@ -38,7 +38,8 @@ class BaseDataProvider(object):
     channels = 1
     n_class = 2
     
-    def __init__(self, a_min = None, a_max = None):
+
+    def __init__(self, a_min=None, a_max=None):
         self.a_min = a_min if a_min is not None else -np.inf
         self.a_max = a_max if a_min is not None else np.inf
 
@@ -59,24 +60,9 @@ class BaseDataProvider(object):
         if self.n_class == 2:
             nx = label.shape[1]
             ny = label.shape[0]
-            labels = np.zeros((ny, nx, self.n_class), dtype = np.float32)
-
-            if np.isscalar(label[0, 0]):
-                labels[..., 1] = label
-                labels[..., 0] = ~label
-            else:
-                for i, r in enumerate(label):
-                    for j, c in enumerate(r):
-                        labels[i, j, 0] = np.asscalar(~c[0]*1.0)
-                        labels[i, j, 1] = np.asscalar(c[0]*1.0)
-            #labels[..., 1] = label#[..., 1]
-            #labels[..., 0] = ~label#[..., 0]
-            '''
-            print(np.shape(labels))
-            print(np.amin(labels))
-            print(np.amax(labels))
-            print(labels)
-            '''
+            labels = np.zeros((ny, nx, self.n_class), dtype=np.float32)
+            labels[..., 1] = label
+            labels[..., 0] = ~label
             return labels
         
         return label
@@ -121,15 +107,16 @@ class SimpleDataProvider(BaseDataProvider):
     data `[n, X, Y, channels]`, label `[n, X, Y, classes]`. Where
     `n` is the number of images, `X`, `Y` the size of the image.
 
-    :param data: data numpy array. Shape = [n, X, Y, channels]
-    :param label: label numpy array. Shape = [n, X, Y, classes]
+    :param data: data numpy array. Shape=[n, X, Y, channels]
+    :param label: label numpy array. Shape=[n, X, Y, classes]
     :param a_min: (optional) min value used for clipping
     :param a_max: (optional) max value used for clipping
-    :param channels: (optional) number of channels, default = 1
-    :param n_class: (optional) number of classes, default = 2
+    :param channels: (optional) number of channels, default=1
+    :param n_class: (optional) number of classes, default=2
+    
     """
     
-    def __init__(self, data, label, a_min = None, a_max = None, channels = 1, n_class = 2):
+    def __init__(self, data, label, a_min=None, a_max=None, channels=1, n_class = 2):
         super(SimpleDataProvider, self).__init__(a_min, a_max)
         self.data = data
         self.label = label
@@ -158,11 +145,12 @@ class ImageDataProvider(BaseDataProvider):
     :param data_suffix: suffix pattern for the data images. Default '.tif'
     :param mask_suffix: suffix pattern for the label images. Default '_mask.tif'
     :param shuffle_data: if the order of the loaded file path should be randomized. Default 'True'
-    :param n_class: (optional) number of classes, default = 2
+    :param channels: (optional) number of channels, default=1
+    :param n_class: (optional) number of classes, default=2
     
     """
     
-    def __init__(self, search_path, a_min = None, a_max = None, data_suffix = '.tif', mask_suffix = '_mask.tif', shuffle_data = True, n_class = 2):
+    def __init__(self, search_path, a_min=None, a_max=None, data_suffix=".tif", mask_suffix='_mask.tif', shuffle_data=True, n_class = 2):
         super(ImageDataProvider, self).__init__(a_min, a_max)
         self.data_suffix = data_suffix
         self.mask_suffix = mask_suffix
@@ -175,22 +163,22 @@ class ImageDataProvider(BaseDataProvider):
         if self.shuffle_data:
             np.random.shuffle(self.data_files)
         
-        assert len(self.data_files) > 0, 'No training files'
-
-        print('Number of files used: %s' % len(self.data_files))
+        assert len(self.data_files) > 0, "No training files"
+        print("Number of files used: %s" % len(self.data_files))
         
         img = self._load_file(self.data_files[0])
         self.channels = 1 if len(img.shape) == 2 else img.shape[-1]
-
+        
     def _find_data_files(self, search_path):
         all_files = glob.glob(search_path)
         return [name for name in all_files if self.data_suffix in name and not self.mask_suffix in name]
     
-    def _load_file(self, path, dtype = np.float32):
+    
+    def _load_file(self, path, dtype=np.float32):
         return np.array(Image.open(path), dtype)
         # return np.squeeze(cv2.imread(image_name, cv2.IMREAD_GRAYSCALE))
 
-    def _cycle_file(self):
+    def _cylce_file(self):
         self.file_idx += 1
         if self.file_idx >= len(self.data_files):
             self.file_idx = 0 
@@ -198,11 +186,11 @@ class ImageDataProvider(BaseDataProvider):
                 np.random.shuffle(self.data_files)
         
     def _next_data(self):
-        self._cycle_file()
+        self._cylce_file()
         image_name = self.data_files[self.file_idx]
         label_name = image_name.replace(self.data_suffix, self.mask_suffix)
         
         img = self._load_file(image_name, np.float32)
         label = self._load_file(label_name, np.bool)
     
-        return img, label
+        return img,label

@@ -1,5 +1,6 @@
 '''
-created on 2018-06-15
+created: 2018-06-15
+edited: 2018-07-16
 author: Adrian Hintze @Rydion
 '''
 
@@ -8,6 +9,9 @@ import numpy as np
 
 from scipy import signal
 from scipy.io import wavfile
+
+# TODO:
+#   switch for verbosity
 
 class AudioReader:
     @staticmethod
@@ -23,7 +27,7 @@ class AudioReader:
         samples = samples.astype(float)
         # TODO check mono compatibility?
         # Alternatively we could just pick one of the channels
-        return (samples[:, 0] + samples[:, 1])/2
+        return (samples[:, 0] + samples[:, 1])//2
 
     @staticmethod
     def downsample_signal(X, original_sample_rate, new_sample_rate):

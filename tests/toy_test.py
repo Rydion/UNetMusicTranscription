@@ -12,8 +12,8 @@ import matplotlib.pyplot as plt
 from tf_unet import image_gen
 from tf_unet import unet
 from tf_unet import util
+from utils.functions import binarize
 
-#plt.rcParams['image.cmap'] = 'gist_earth'
 np.random.seed(98765)
 
 def train():
@@ -21,26 +21,6 @@ def train():
     ny = 572
 
     generator = image_gen.GrayScaleDataProvider(nx, ny, cnt = 20)
-
-    '''
-    x, y = generator(1)
-    fig, ax = plt.subplots(1, 3, figsize = (12, 4))
-    ax[0].imshow(x[0, ..., 0], aspect = 'auto')
-    ax[1].imshow(y[0, ..., 1], aspect = 'auto', cmap = plt.cm.gray)
-    plt.draw()
-    plt.show()
-
-    print(np.shape(x))
-    print(np.shape(y))
-    print(np.amin(x))
-    print(np.amax(x))
-    print(np.amin(y))
-    print(np.amax(y))
-    print(generator.channels)
-    print(generator.n_class)
-    '''
-    #return
-
     net = unet.Unet(
         channels = generator.channels,
         n_class = generator.n_class,
@@ -66,9 +46,7 @@ def train():
 def predict(net, generator):
     x, y = generator(1)
     prediction = net.predict('./unet_trained_toy/model.ckpt', x)
-    mask = np.zeros(np.shape(prediction), dtype = np.float32)
-    mask[:, :, 0] = prediction[:, :, 0] >= 0.5
-    mask[:, :, 1] = prediction[:, :, 1] >= 0.5
+    mask = prediction#[0, ..., 1] > 0.9
 
     print(np.shape(x))
     print(np.shape(y))
@@ -84,14 +62,14 @@ def predict(net, generator):
     print(np.amax(mask))
 
     fig, ax = plt.subplots(1, 4, sharex = True, sharey = True, figsize = (12, 5))
-    ax[0].imshow(x[0, ..., 0], aspect = 'auto')
+    ax[0].imshow(x[0, ..., 0], aspect = 'auto', cmap = plt.cm.gray)
     ax[1].imshow(y[0, ..., 1], aspect = 'auto', cmap = plt.cm.gray)
-    ax[2].imshow(prediction[0, ..., 1], aspect = 'auto', cmap = plt.cm.gray)
-    ax[3].imshow(mask[0, ..., 1], aspect = 'auto', cmap = plt.cm.gray)
-    ax[0].set_title("Input")
-    ax[1].set_title("Ground truth")
-    ax[2].set_title("Prediction")
-    ax[3].set_title("Mask")
+    ax[2].imshow(prediction[0, ..., 1], aspect = 'auto', cmap = plt.cm.binary)
+    ax[3].imshow(mask[0, ..., 1], aspect = 'auto', cmap = plt.cm.binary)
+    ax[0].set_title('Input')
+    ax[1].set_title('Ground truth')
+    ax[2].set_title('Prediction')
+    ax[3].set_title('Mask')
     fig.tight_layout()
     plt.draw()
     plt.show()
@@ -101,8 +79,6 @@ def test():
     predict(net, generator)
 
 def init():
-    #tf.reset_default_graph()
-
     shutil.rmtree('./unet_trained_toy', ignore_errors = True)
     shutil.rmtree('./prediction_toy', ignore_errors = True)
 

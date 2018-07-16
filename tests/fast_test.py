@@ -12,13 +12,11 @@ import matplotlib.pyplot as plt
 from tf_unet.unet import Unet, Trainer
 from tf_unet.image_util import ImageDataProvider
 
-#plt.rcParams['image.cmap'] = 'gist_earth'
-
-IMAGE_FORMAT = '.bmp'
+IMAGE_FORMAT = '.png'
 TRAINING_DATA_DIR = './data/preprocessed/MIREX/*'
 data_suffix = '_in' + IMAGE_FORMAT
 mask_suffix = '_out' + IMAGE_FORMAT
-EPOCHS = 20
+EPOCHS = 1
 
 def train():
     data_provider = ImageDataProvider(
@@ -49,7 +47,7 @@ def train():
     net = Unet(
         channels = data_provider.channels,
         n_class = data_provider.n_class,
-        layers = 3,
+        layers = 4,
         features_root = 16
     )
     trainer = Trainer(
@@ -71,8 +69,8 @@ def predict(net, data_provider):
     x, y = data_provider(1)
     prediction = net.predict('./unet_trained_fast/model.ckpt', x)
     mask = np.zeros(np.shape(prediction), dtype = np.float32)
-    mask[:, :, 0] = prediction[:, :, 0] >= 0.5
-    mask[:, :, 1] = prediction[:, :, 1] >= 0.5
+    mask[:, :, 0] = prediction[:, :, 0] >= 0.9
+    mask[:, :, 1] = prediction[:, :, 1] >= 0.9
 
     print(np.shape(x))
     print(np.shape(y))
@@ -88,14 +86,14 @@ def predict(net, data_provider):
     print(np.amax(mask))
 
     fig, ax = plt.subplots(1, 4, figsize = (12, 4))
-    ax[0].imshow(x[0, ..., 0], aspect = 'auto')
+    ax[0].imshow(x[0, ..., 0], aspect = 'auto', cmap = plt.cm.gray)
     ax[1].imshow(y[0, ..., 1], aspect = 'auto', cmap = plt.cm.gray)
     ax[2].imshow(prediction[0, ..., 1], aspect = 'auto', cmap = plt.cm.gray)
     ax[3].imshow(mask[0, ..., 1], aspect = 'auto', cmap = plt.cm.gray)
-    ax[0].set_title("Input")
-    ax[1].set_title("Ground truth")
-    ax[2].set_title("Prediction")
-    ax[3].set_title("Mask")
+    ax[0].set_title('Input')
+    ax[1].set_title('Ground truth')
+    ax[2].set_title('Prediction')
+    ax[3].set_title('Mask')
     plt.draw()
     plt.show()
 
