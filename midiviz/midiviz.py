@@ -1,6 +1,5 @@
 '''
 created: 2018-06-20
-edited: 2018-07-03
 author: Adrian Hintze @Rydion
 '''
 
@@ -60,6 +59,7 @@ class MidiFile(mido.MidiFile):
         img = img.reshape(height, width, 3)
 
         plt.close(fig)
+
         return img
 
     def draw_roll(self, draw_colorbar = True):
@@ -142,46 +142,26 @@ class MidiFile(mido.MidiFile):
 
     def get_chunk_generator(self, chunk_length):
         img = self.get_roll_image()
-        print(np.shape(img))
         for i in range(0, np.shape(img)[1], chunk_length):
             yield img[:, i:i + chunk_length]
 
     def _get_roll(self):
         length = self.total_ticks
-        roll = np.zeros((16, 128, length//self.sr), dtype = 'int8')
+        roll = np.zeros((16, 128, length//self.sr), dtype = 'int32')
         # use a register array to save the state (on/off) for each key
-        note_register = [int(-1) for x in range(128)]
-        # use a register array to save the state (program_change) for each channel
-        timbre_register = [1 for x in range(16)]
+        note_register = [-1 for x in range(128)]
 
-        for idx, channel in enumerate(self.events):
+        for channel_id, channel in enumerate(self.events):
             time_counter = 0
-            volume = 100
-            # Volume would change by control change event (cc) cc7 & cc11
-            # Volume 0-100 is mapped to 0-127
-
-            if self.verbose:
-                print('channel', idx, 'start')
+            intensity = 0
 
             for msg in channel:
-                if msg.type == 'control_change':
-                    if msg.control == 7:
-                        volume = msg.value
-                    if msg.control == 11:
-                        # Change volume by percentage
-                        volume = volume*msg.value//127
-
-                if msg.type == 'program_change':
-                    if self.verbose:
-                        print('channel', idx, 'pc', msg.program, 'time', time_counter, 'duration', msg.time)
-                    timbre_register[idx] = msg.program
-
                 if msg.type == 'note_on':
                     if self.verbose:
                         print('on ', msg.note, 'time', time_counter, 'duration', msg.time, 'velocity', msg.velocity)
                     note_on_start_time = time_counter//self.sr
                     note_on_end_time = (time_counter + msg.time)//self.sr
-                    intensity = volume*msg.velocity//127
+                    intensity = 0 if msg.velocity == 0 else 255
 
 					# When a note_on event *ends* the note starts to be played
 					# Record end time of note_on event if there is no value in register
@@ -192,7 +172,7 @@ class MidiFile(mido.MidiFile):
 					# When note_on event happens again, we also fill in the color
                         old_end_time = note_register[msg.note][0]
                         old_intensity = note_register[msg.note][1]
-                        roll[idx, msg.note, old_end_time: note_on_end_time] = old_intensity
+                        roll[channel_id, msg.note, old_end_time:note_on_end_time] = old_intensity
                         note_register[msg.note] = (note_on_end_time, intensity)
 
                 if msg.type == 'note_off':
@@ -203,14 +183,13 @@ class MidiFile(mido.MidiFile):
                     note_on_end_time = note_register[msg.note][0]
                     intensity = note_register[msg.note][1]
 					# fill in color
-                    roll[idx, msg.note, note_on_end_time:note_off_end_time] = intensity
+                    roll[channel_id, msg.note, note_on_end_time:note_off_end_time] = intensity
                     note_register[msg.note] = -1  # reinitialize register
 
                 time_counter += msg.time
 
                 # TODO: velocity -> done, but not verified
                 # TODO: Pitch wheel
-                # TODO: Channel - > Program Changed / Timbre catagory
                 # TODO: real time scale of roll
 
             # If a note is not closed at the end of a channel, close it
@@ -219,8 +198,14 @@ class MidiFile(mido.MidiFile):
                     note_on_end_time = data[0]
                     intensity = data[1]
                     note_off_start_time = time_counter//self.sr
-                    roll[idx, key, note_on_end_time:] = intensity
-                note_register[idx] = -1
+                    roll[channel_id, key, note_on_end_time:] = intensity
+                note_register[channel_id] = -1
+
+        # Crop the notes available on a standard piano
+        roll = roll[:, 20:108, :]
+
+        # Crop to exact length in seconds
+        roll = roll[:, :, 0:(length//self.length_seconds)*self.length_seconds]
 
         return roll
 
@@ -234,11 +219,7 @@ class MidiFile(mido.MidiFile):
 
     def _get_length_seconds(self):
         seconds = mido.tick2second(self.total_ticks, self.ticks_per_beat, self.get_tempo())
-        # Not super robust I know
-        if seconds.is_integer():
-            return int(seconds)
-
-        return int(seconds) + 1
+        return int(seconds)
 
     def _get_events(self):
         if self.verbose:

@@ -4,13 +4,17 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>dd7ba320-ea2a-467f-9f26-17ea25329b5a</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>UNetMusicTranscription.py</StartupFile>
+    <StartupFile>preprocess.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
     <Name>UNetMusicTranscription</Name>
     <RootNamespace>UNetMusicTranscription</RootNamespace>
+    <LaunchProvider>Standard Python launcher</LaunchProvider>
+    <InterpreterArguments>
+    </InterpreterArguments>
+    <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>

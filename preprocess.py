@@ -11,7 +11,13 @@ DATA_DST_PATH = './data/preprocessed/MIREX/'
 
 def main():
     preprocessor = Preprocessor()
-    preprocessor.preprocess(DATA_SRC_PATH, DATA_DST_PATH, transformation = 'cqt')
+    preprocessor.preprocess(
+        DATA_SRC_PATH,
+        DATA_DST_PATH,
+        gen_input = True,
+        gen_output = True,
+        transformation = 'spectrogram'
+    )
 
 
 if __name__ == '__main__':
