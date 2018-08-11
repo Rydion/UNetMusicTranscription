@@ -1,6 +1,5 @@
 '''
 created: 2018-05-31
-edited: 2018-07-04
 author: Adrian Hintze @Rydion
 '''
 
@@ -13,7 +12,7 @@ from tf_unet.unet import Unet, Trainer
 from tf_unet.image_util import ImageDataProvider
 
 IMAGE_FORMAT = '.png'
-TRAINING_DATA_DIR = './data/preprocessed/MIREX/*'
+TRAINING_DATA_DIR = './data/preprocessed/Piano/*'
 DATA_SUFFIX = '_in' + IMAGE_FORMAT
 MASK_SUFFIX = '_out' + IMAGE_FORMAT
 EPOCHS = 25

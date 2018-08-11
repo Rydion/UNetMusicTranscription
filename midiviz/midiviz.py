@@ -202,7 +202,7 @@ class MidiFile(mido.MidiFile):
                 note_register[channel_id] = -1
 
         # Crop the notes available on a standard piano
-        roll = roll[:, 20:108, :]
+        #roll = roll[:, 20:108, :]
 
         # Crop to exact length in seconds
         roll = roll[:, :, 0:(length//self.length_seconds)*self.length_seconds]

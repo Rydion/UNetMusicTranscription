@@ -1,13 +1,12 @@
 '''
 created: 2018-06-14
-edited: 2018-07-16
 author: Adrian Hintze @Rydion
 '''
 
 from utils.Preprocessor import Preprocessor
 
-DATA_SRC_PATH = './data/raw/MIREX/'
-DATA_DST_PATH = './data/preprocessed/MIREX/'
+DATA_SRC_PATH = './data/raw/Piano/'
+DATA_DST_PATH = './data/preprocessed/Piano/'
 
 def main():
     preprocessor = Preprocessor()

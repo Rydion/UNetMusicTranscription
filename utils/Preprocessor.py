@@ -1,6 +1,5 @@
 '''
 created: 2018-07-16
-edited: 2018-07-16
 author: Adrian Hintze @Rydion
 '''
 
@@ -71,13 +70,13 @@ class Preprocessor:
                 sr = 1, # TODO calculate to make the result multiple of length
                 verbose = False
             )
-            print(mid.total_ticks)
 
             # If input and output have different lengths we still want to use the data
             length = min(mid.length_seconds, AudioReader.calc_signal_length_seconds(samples, sample_rate))
 
             # Crop sound and mid to the nearest second integer
-            samples = samples[0:sample_rate*length]
+            offset = 0#Preprocessor.DOWNSAMPLE_RATE//2
+            samples = samples[offset:sample_rate*length + offset]
             # TODO crop mid
 
             # Crop spectrum/mid to length
@@ -100,16 +99,18 @@ class Preprocessor:
             else:
                 raise ValueError('Unknown transformation: ' + transformation + '.')
 
+            subdivisions = length*2
+
             if gen_input:
                 spectrum.save(os.path.join(dst_dir, file_name + '.spectrum.png'))
                 #slice_length = Preprocessor.calc_rounded_slice_length(np.shape(spectrum.values)[1], length)
-                slice_length = Preprocessor.calc_rounded_slice_length(np.shape(spectrum.get_img())[1], length)
+                slice_length = Preprocessor.calc_rounded_slice_length(np.shape(spectrum.get_img())[1], subdivisions)
                 chunks = spectrum.get_chunk_generator(slice_length)
                 self._save_sliced(chunks, dst_dir, file_name, file_suffix = 'in', binary = False)
 
             if gen_output:
                 mid.save_roll(os.path.join(dst_dir, file_name + '.mid.png'))
-                slice_length = Preprocessor.calc_rounded_slice_length(np.shape(mid.get_roll_image())[1], length)
+                slice_length = Preprocessor.calc_rounded_slice_length(np.shape(mid.get_roll_image())[1], subdivisions)
                 chunks = mid.get_chunk_generator(slice_length)
                 self._save_sliced(chunks, dst_dir, file_name, file_suffix = 'out', binary = True)
 
@@ -122,8 +123,8 @@ class Preprocessor:
             os.makedirs(dst_dir)
 
     def _save_sliced(self, chunks, dst_dir, file_name, file_suffix = '', binary = False):
-        #fig, ax = plt.subplots(1, figsize = (4, 11), dpi = 16)
-        fig, ax = plt.subplots(1, figsize = (4, 16), dpi = 32)
+        #fig, ax = plt.subplots(1, figsize = (4, 16), dpi = 32)
+        fig, ax = plt.subplots(1, figsize = (2, 8), dpi = 64)
         fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
 
         start = time.clock()
