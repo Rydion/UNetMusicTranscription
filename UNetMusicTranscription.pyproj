@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>dd7ba320-ea2a-467f-9f26-17ea25329b5a</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>preprocess.py</StartupFile>
+    <StartupFile>UNetMusicTranscription.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -39,7 +39,6 @@
     <Compile Include="scripts\ultrasound_launcher.py" />
     <Compile Include="scripts\ultrasound_util.py" />
     <Compile Include="scripts\__init__.py" />
-    <Compile Include="tests\fast_test.py" />
     <Compile Include="tests\toy_test.py">
       <SubType>Code</SubType>
     </Compile>
@@ -53,11 +52,12 @@
     <Compile Include="unet\Unet.py" />
     <Compile Include="unet\util.py" />
     <Compile Include="unet\__init__.py" />
+    <Compile Include="utils\Midi.py" />
     <Compile Include="utils\AudioReader.py" />
     <Compile Include="utils\Preprocessor.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="utils\CQTransform.py" />
+    <Compile Include="utils\CQT.py" />
     <Compile Include="utils\Spectrogram.py" />
     <Compile Include="utils\functions.py" />
     <Compile Include="utils\Spectrum.py">

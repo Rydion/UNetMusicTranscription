@@ -3,10 +3,13 @@ created: 2018-06-14
 author: Adrian Hintze @Rydion
 '''
 
+import os
+
 from utils.Preprocessor import Preprocessor
 
-DATA_SRC_PATH = './data/raw/Piano/'
-DATA_DST_PATH = './data/preprocessed/Piano/'
+DATASET = 'Piano' # Piano MIREX
+DATA_SRC_PATH = os.path.join('./data/raw/', DATASET) 
+DATA_DST_PATH = os.path.join('./data/preprocessed/', DATASET)
 
 def main():
     preprocessor = Preprocessor()
@@ -15,7 +18,7 @@ def main():
         DATA_DST_PATH,
         gen_input = True,
         gen_output = True,
-        transformation = 'spectrogram'
+        transformation = 'cqt'
     )
 
 

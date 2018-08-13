@@ -32,7 +32,7 @@ class MidiFile(mido.MidiFile):
         channel_nb = 16
         transparent = colorConverter.to_rgba('black')
         colors = [mpl.colors.to_rgba(mpl.colors.hsv_to_rgb((i/channel_nb, 1, 1)), alpha = 1) for i in range(channel_nb)]
-        cmaps = [mpl.colors.LinearSegmentedColormap.from_list('my_cmap', [transparent, colors[i]], 128) for i in range(channel_nb)]
+        cmaps = [mpl.colors.LinearSegmentedColormap.from_list('my_cmap', [transparent, colors[i]], 48) for i in range(channel_nb)]
 
         # build color maps
         for i in range(channel_nb):
@@ -203,6 +203,7 @@ class MidiFile(mido.MidiFile):
 
         # Crop the notes available on a standard piano
         #roll = roll[:, 20:108, :]
+        roll = roll[:, 60:108, :]
 
         # Crop to exact length in seconds
         roll = roll[:, :, 0:(length//self.length_seconds)*self.length_seconds]

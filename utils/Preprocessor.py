@@ -12,7 +12,8 @@ from PIL import Image
 from midiviz.midiviz import MidiFile
 from utils.AudioReader import AudioReader
 from utils.Spectrogram import Spectrogram
-from utils.CQTransform import CQTransform
+from utils.CQT import CQT
+from utils.Midi import Midi
 from utils.functions import grey_scale, binarize
 
 # TODO:
@@ -22,7 +23,7 @@ from utils.functions import grey_scale, binarize
 
 class Preprocessor:
     IMAGE_FORMAT = '.png'
-    DOWNSAMPLE_RATE = 8192 #Hz
+    DOWNSAMPLE_RATE = 16000 #Hz
     SFFT_WINDOW_LENGTH = 1024
     SFFT_STRIDE = SFFT_WINDOW_LENGTH//2
     FILL_DIGITS = 4
@@ -44,9 +45,7 @@ class Preprocessor:
 
         for file in os.listdir(src_dir):
             file_name, file_extension = os.path.splitext(file)
-            if file_name != 'h':
-                #continue
-                pass
+            # Search for audio files
             if file_extension != '.wav':
                 continue
 
@@ -57,17 +56,20 @@ class Preprocessor:
             print('Generating input/output for %s.' % file_name)
 
             # Read original files
-            audioreader = AudioReader()
-            sample_rate, samples = audioreader.read_wav(
+            sample_rate, samples = AudioReader.read_wav(
                 os.path.join(src_dir, file),
                 as_mono = True,
                 downsample = True,
                 downsample_rate = Preprocessor.DOWNSAMPLE_RATE
             )
 
+            mid = Midi.from_file(os.path.join(src_dir, file_name + '.mid'))
+            mid.plot()
+            exit()
+
             mid = MidiFile(
                 os.path.join(src_dir, file_name + '.mid'),
-                sr = 1, # TODO calculate to make the result multiple of length
+                sr = 1,
                 verbose = False
             )
 
@@ -75,9 +77,9 @@ class Preprocessor:
             length = min(mid.length_seconds, AudioReader.calc_signal_length_seconds(samples, sample_rate))
 
             # Crop sound and mid to the nearest second integer
-            offset = 0#Preprocessor.DOWNSAMPLE_RATE//2
+            offset = 0
             samples = samples[offset:sample_rate*length + offset]
-            # TODO crop mid
+            # TODO drop mid
 
             # Crop spectrum/mid to length
             # Calculate slice length
@@ -88,22 +90,20 @@ class Preprocessor:
                     sample_rate,
                     samples,
                     window_length = Preprocessor.SFFT_WINDOW_LENGTH,
-                    stride = Preprocessor.SFFT_WINDOW_LENGTH - Preprocessor.SFFT_STRIDE
+                    stride = Preprocessor.SFFT_STRIDE
                 )
             elif transformation == 'cqt':
-                spectrum = CQTransform.from_audio(
+                spectrum = CQT.from_audio(
                     sample_rate,
-                    samples,
-                    stride = Preprocessor.SFFT_STRIDE
+                    samples
                 )
             else:
                 raise ValueError('Unknown transformation: ' + transformation + '.')
 
-            subdivisions = length*2
+            subdivisions = length
 
             if gen_input:
-                spectrum.save(os.path.join(dst_dir, file_name + '.spectrum.png'))
-                #slice_length = Preprocessor.calc_rounded_slice_length(np.shape(spectrum.values)[1], length)
+                spectrum.save(os.path.join(dst_dir, file_name + '.spectrum.png'), color = False)
                 slice_length = Preprocessor.calc_rounded_slice_length(np.shape(spectrum.get_img())[1], subdivisions)
                 chunks = spectrum.get_chunk_generator(slice_length)
                 self._save_sliced(chunks, dst_dir, file_name, file_suffix = 'in', binary = False)
@@ -116,24 +116,18 @@ class Preprocessor:
 
             # Output aesthetics
             print()
-            #break
 
     def _create_dst_dir(self, dst_dir):
         if not os.path.exists(dst_dir):
             os.makedirs(dst_dir)
 
     def _save_sliced(self, chunks, dst_dir, file_name, file_suffix = '', binary = False):
-        #fig, ax = plt.subplots(1, figsize = (4, 16), dpi = 32)
-        fig, ax = plt.subplots(1, figsize = (2, 8), dpi = 64)
+        fig, ax = plt.subplots(1, figsize = (4, 16), dpi = 32)
         fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
 
         start = time.clock()
         slice_length = 0
         for i, c in enumerate(chunks):
-            if i >= 40: # TODO
-                #break
-                pass
-
             # Don't save the last slice if it is smaller than the rest
             if np.shape(c)[1] < slice_length:
                 break

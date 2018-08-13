@@ -11,61 +11,63 @@ import matplotlib.pyplot as plt
 from utils.Spectrum import Spectrum
 from utils.functions import normalize_array
 
-class CQTransform(Spectrum):
+class CQT(Spectrum):
     @classmethod
     def from_audio(cls, sample_rate, samples, stride = 512):
         values = librosa.core.cqt(
             samples,
             sr = sample_rate,
-            n_bins = 7,
-            bins_per_octave = 36,
-            hop_length = stride
+            #n_bins = 7,
+            #bins_per_octave = 36,
+            #hop_length = stride
         )
-        values = np.abs(values)
-        values = CQTransform.normalize_values(values)
-        return CQTransform(values)
+        values = librosa.amplitude_to_db(np.abs(values), ref = np.max)
+        values = CQT.normalize_values(values)
+        return CQT(values)
 
     def __init__(self, values):
         super().__init__(values)
 
-    def plot(self):
-        plt.pcolormesh(self.values, aspect = 'auto', cmap = plt.cm.hot)
-        plt.ylabel('Frequency [Hz]')
-        plt.xlabel('Time [sec]')
-        plt.show()
+    def plot(self, color = True):
+        fig, ax = plt.subplots(1)
+        librosa.display.specshow(
+            self.values,
+            y_axis = 'cqt_hz',
+            ax = ax,
+            cmap = None if color else plt.cm.gray
+        )
+        fig.title('Constant-Q power spectrogram (HZ)')
+        plt.show(fig)
+        plt.close(fig)
 
-    def save(self, dest_path):
+    def save(self, dest_path, color = True):
         fig, ax = plt.subplots(1)
         fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
         ax.axis('off')
 
-        ax.imshow(
+        librosa.display.specshow(
             self.values,
-            aspect = 'auto',
-            cmap = plt.cm.gray
+            y_axis = 'cqt_hz',
+            ax = ax,
+            cmap = None if color else plt.cm.gray
         )
-        fig.savefig(dest_path)
-        
-        plt.close(fig)
 
-    def get_chunk_generator(self, chunk_length):
-        img = self.get_img()
-        for i in range(0, np.shape(img)[1], chunk_length):
-            yield img[:, i:i + chunk_length]
+        fig.savefig(dest_path)
+
+        plt.close(fig)
 
     def get_img(self):
         fig, ax = plt.subplots(1)
         fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
         ax.axis('off')
-        ax.set_facecolor('black')
 
-        ax.imshow(
+        librosa.display.specshow(
             self.values,
-            aspect = 'auto',
+            y_axis = 'cqt_hz',
+            ax = ax,
             cmap = plt.cm.gray
         )
 
-        #canvas = FigureCanvasAgg(fig)
         fig.canvas.draw()
         img = np.fromstring(fig.canvas.tostring_rgb(), dtype = 'uint8')
 

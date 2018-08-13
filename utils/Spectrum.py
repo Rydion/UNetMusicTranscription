@@ -28,9 +28,18 @@ class Spectrum(ABC):
     def plot(self):
         pass
 
+    @abstractmethod
+    def save(self):
+        pass
+
+    @abstractmethod
+    def get_img(self):
+        pass
+
     def get_chunk_generator(self, chunk_length):
-        for i in range(0, np.shape(self.values)[1], chunk_length):
-            yield self.values[:, i:i + chunk_length]
+        img = self.get_img()
+        for i in range(0, np.shape(img)[1], chunk_length):
+            yield img[:, i:i + chunk_length]
 
     @property
     def values(self):
