@@ -22,54 +22,30 @@ class Spectrogram(Spectrum):
         )
         values = librosa.amplitude_to_db(np.abs(values), ref = np.max)
         values = Spectrogram.normalize_values(values)
-        return Spectrogram(values)
+        return Spectrogram(values, sample_rate)
 
-    def __init__(self, values):
-        super().__init__(values)
+    def __init__(self, *args):
+        super().__init__(*args)
 
     def plot(self, color = True):
-        fig, ax = plt.subplots(1)
-        librosa.display.specshow(
-            self.values,
-            y_axis = 'log',
-            ax = ax,
-            cmap = None if color else plt.cm.gray
-        )
-        fig.title('Log-frequency power spectrogram')
+        fig, ax = self._plot(color)
         plt.show(fig)
         plt.close(fig)
 
     def save(self, dest_path, color = True):
-        fig, ax = plt.subplots(1)
+        fig, ax = self._plot(color)
         fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
         ax.axis('off')
-
-        librosa.display.specshow(
-            self.values,
-            y_axis = 'log',
-            ax = ax,
-            cmap = None if color else plt.cm.gray
-        )
-
         fig.savefig(dest_path)
-
         plt.close(fig)
 
     def get_img(self):
-        fig, ax = plt.subplots(1)
+        fig, ax = self._plot(color = False)
         fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
         ax.axis('off')
 
-        librosa.display.specshow(
-            self.values,
-            y_axis = 'log',
-            ax = ax,
-            cmap = plt.cm.gray
-        )
-
         fig.canvas.draw()
         img = np.fromstring(fig.canvas.tostring_rgb(), dtype = 'uint8')
-
         width, height = fig.get_size_inches()*fig.get_dpi()
         width = int(width)
         height = int(height)
@@ -79,10 +55,19 @@ class Spectrogram(Spectrum):
 
         return img
 
-    @property
-    def frequencies(self):
-        return self._frequencies
+    def get_chunk_generator(self, chunk_length):
+        img = self.get_img()
+        for i in range(0, np.shape(img)[1], chunk_length):
+            yield img[:, i:i + chunk_length]
 
-    @property
-    def times(self):
-        return self._times
+    def _plot(self, color = True):
+        fig, ax = plt.subplots(1)
+        librosa.display.specshow(
+            self.values,
+            sr = self.sample_rate,
+            y_axis = 'log',
+            x_axis = 'time',
+            ax = ax,
+            cmap = None if color else plt.cm.gray
+        )
+        return fig, ax

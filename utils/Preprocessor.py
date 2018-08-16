@@ -64,22 +64,25 @@ class Preprocessor:
             )
 
             mid = Midi.from_file(os.path.join(src_dir, file_name + '.mid'))
-            mid.plot()
-            exit()
-
-            mid = MidiFile(
+            '''
+            mid2 = MidiFile(
                 os.path.join(src_dir, file_name + '.mid'),
                 sr = 1,
                 verbose = False
             )
-
+            '''
             # If input and output have different lengths we still want to use the data
-            length = min(mid.length_seconds, AudioReader.calc_signal_length_seconds(samples, sample_rate))
+            duration = min(mid.get_length_seconds(), AudioReader.calc_signal_length_seconds(samples, sample_rate))
+            #length = AudioReader.calc_signal_length_seconds(samples, sample_rate)
 
-            # Crop sound and mid to the nearest second integer
-            offset = 0
-            samples = samples[offset:sample_rate*length + offset]
-            # TODO drop mid
+            if duration < AudioReader.calc_signal_length_seconds(samples, sample_rate):
+                sample_rate, samples = AudioReader.read_wav(
+                    os.path.join(src_dir, file),
+                    as_mono = True,
+                    downsample = True,
+                    downsample_rate = Preprocessor.DOWNSAMPLE_RATE,
+                    duration = duration
+                )
 
             # Crop spectrum/mid to length
             # Calculate slice length
@@ -100,7 +103,7 @@ class Preprocessor:
             else:
                 raise ValueError('Unknown transformation: ' + transformation + '.')
 
-            subdivisions = length
+            subdivisions = int(duration)
 
             if gen_input:
                 spectrum.save(os.path.join(dst_dir, file_name + '.spectrum.png'), color = False)
@@ -109,8 +112,8 @@ class Preprocessor:
                 self._save_sliced(chunks, dst_dir, file_name, file_suffix = 'in', binary = False)
 
             if gen_output:
-                mid.save_roll(os.path.join(dst_dir, file_name + '.mid.png'))
-                slice_length = Preprocessor.calc_rounded_slice_length(np.shape(mid.get_roll_image())[1], subdivisions)
+                mid.save(os.path.join(dst_dir, file_name + '.mid.png'))
+                slice_length = Preprocessor.calc_rounded_slice_length(np.shape(mid.get_img())[1], subdivisions)
                 chunks = mid.get_chunk_generator(slice_length)
                 self._save_sliced(chunks, dst_dir, file_name, file_suffix = 'out', binary = True)
 
@@ -137,6 +140,7 @@ class Preprocessor:
             if binary:
                 c = grey_scale(c)
                 c = binarize(c, 200)
+                c = c[200:320, :]
 
             ax.clear()
             ax.axis('off')

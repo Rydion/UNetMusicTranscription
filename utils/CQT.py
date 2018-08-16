@@ -23,15 +23,16 @@ class CQT(Spectrum):
         )
         values = librosa.amplitude_to_db(np.abs(values), ref = np.max)
         values = CQT.normalize_values(values)
-        return CQT(values)
+        return CQT(values, sample_rate)
 
-    def __init__(self, values):
-        super().__init__(values)
+    def __init__(self, *args):
+        super().__init__(*args)
 
     def plot(self, color = True):
         fig, ax = plt.subplots(1)
         librosa.display.specshow(
             self.values,
+            sr = self.sample_rate,
             y_axis = 'cqt_hz',
             ax = ax,
             cmap = None if color else plt.cm.gray

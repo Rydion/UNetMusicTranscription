@@ -21,8 +21,9 @@ class Spectrum(ABC):
     def from_audio(cls, sample_rate, samples, window_length = 1024, stride = 512):
         pass
 
-    def __init__(self, values):
+    def __init__(self, values, sample_rate):
         self._values = values
+        self._sample_rate = sample_rate
 
     @abstractmethod
     def plot(self):
@@ -44,3 +45,7 @@ class Spectrum(ABC):
     @property
     def values(self):
         return self._values
+
+    @property
+    def sample_rate(self):
+        return self._sample_rate

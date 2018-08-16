@@ -18,9 +18,9 @@ DST_DIR = './result/'
 IMAGE_FORMAT = '.png'
 DATA_SUFFIX = '_in' + IMAGE_FORMAT
 MASK_SUFFIX = '_out' + IMAGE_FORMAT
-NUM_EPOCHS = 20
+NUM_EPOCHS = 50
 TRAIN = True
-NUM_TESTS = 1
+NUM_TESTS = 5
 
 def train_network(net_dir, net, data_provider):
     trainer = Trainer(

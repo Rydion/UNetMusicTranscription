@@ -222,6 +222,14 @@ class MidiFile(mido.MidiFile):
         seconds = mido.tick2second(self.total_ticks, self.ticks_per_beat, self.get_tempo())
         return int(seconds)
 
+    def get_length_double(self):
+        print(self.total_ticks)
+        ticks = mido.second2tick(66.4058125, self.ticks_per_beat, self.get_tempo())
+        icks = int(ticks)
+        print(ticks)
+        print(mido.tick2second(ticks, self.ticks_per_beat, self.get_tempo()))
+        return mido.tick2second(self.total_ticks, self.ticks_per_beat, self.get_tempo())
+
     def _get_events(self):
         if self.verbose:
             print(self)
