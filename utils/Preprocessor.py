@@ -9,12 +9,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from PIL import Image
-from midiviz.midiviz import MidiFile
 from utils.AudioReader import AudioReader
-from utils.Spectrogram import Spectrogram
+from utils.Stft import Stft
 from utils.CQT import CQT
 from utils.Midi import Midi
-from utils.functions import grey_scale, binarize
+from utils.functions import grey_scale, binarize, get_chunk_generator
+
+plt.rcParams['figure.figsize'] = [4, 16]
+plt.rcParams['figure.dpi'] = 32
 
 # TODO:
 #   support other extensions apart from wav
@@ -63,17 +65,10 @@ class Preprocessor:
                 downsample_rate = Preprocessor.DOWNSAMPLE_RATE
             )
 
-            mid = Midi.from_file(os.path.join(src_dir, file_name + '.mid'))
-            '''
-            mid2 = MidiFile(
-                os.path.join(src_dir, file_name + '.mid'),
-                sr = 1,
-                verbose = False
-            )
-            '''
+            midi = Midi.from_file(os.path.join(src_dir, file_name + '.mid'))
+
             # If input and output have different lengths we still want to use the data
-            duration = min(mid.get_length_seconds(), AudioReader.calc_signal_length_seconds(samples, sample_rate))
-            #length = AudioReader.calc_signal_length_seconds(samples, sample_rate)
+            duration = min(midi.get_length_seconds(), AudioReader.calc_signal_length_seconds(samples, sample_rate))
 
             if duration < AudioReader.calc_signal_length_seconds(samples, sample_rate):
                 sample_rate, samples = AudioReader.read_wav(
@@ -84,19 +79,15 @@ class Preprocessor:
                     duration = duration
                 )
 
-            # Crop spectrum/mid to length
-            # Calculate slice length
-            # create slices
-
-            if transformation == 'spectrogram':
-                spectrum = Spectrogram.from_audio(
+            if transformation == 'stft':
+                spectrogram = Stft.from_audio(
                     sample_rate,
                     samples,
                     window_length = Preprocessor.SFFT_WINDOW_LENGTH,
                     stride = Preprocessor.SFFT_STRIDE
                 )
             elif transformation == 'cqt':
-                spectrum = CQT.from_audio(
+                spectrogram = CQT.from_audio(
                     sample_rate,
                     samples
                 )
@@ -106,15 +97,17 @@ class Preprocessor:
             subdivisions = int(duration)
 
             if gen_input:
-                spectrum.save(os.path.join(dst_dir, file_name + '.spectrum.png'), color = False)
-                slice_length = Preprocessor.calc_rounded_slice_length(np.shape(spectrum.get_img())[1], subdivisions)
-                chunks = spectrum.get_chunk_generator(slice_length)
+                spectrogram.save(os.path.join(dst_dir, file_name + '.spectrum.png'), subdivisions, 84, color = False)
+                spectrogram_img = spectrogram.get_img(subdivisions, 84)
+                slice_length = Preprocessor.calc_rounded_slice_length(np.shape(spectrogram_img)[1], subdivisions)
+                chunks = get_chunk_generator(spectrogram_img, slice_length)
                 self._save_sliced(chunks, dst_dir, file_name, file_suffix = 'in', binary = False)
 
             if gen_output:
-                mid.save(os.path.join(dst_dir, file_name + '.mid.png'))
-                slice_length = Preprocessor.calc_rounded_slice_length(np.shape(mid.get_img())[1], subdivisions)
-                chunks = mid.get_chunk_generator(slice_length)
+                midi.save(os.path.join(dst_dir, file_name + '.mid.png'), subdivisions)
+                midi_img = midi.get_img(subdivisions)
+                slice_length = Preprocessor.calc_rounded_slice_length(np.shape(midi_img)[1], subdivisions)
+                chunks = get_chunk_generator(midi_img, slice_length)
                 self._save_sliced(chunks, dst_dir, file_name, file_suffix = 'out', binary = True)
 
             # Output aesthetics
@@ -125,7 +118,7 @@ class Preprocessor:
             os.makedirs(dst_dir)
 
     def _save_sliced(self, chunks, dst_dir, file_name, file_suffix = '', binary = False):
-        fig, ax = plt.subplots(1, figsize = (4, 16), dpi = 32)
+        fig, ax = plt.subplots(1)
         fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
 
         start = time.clock()
@@ -140,7 +133,7 @@ class Preprocessor:
             if binary:
                 c = grey_scale(c)
                 c = binarize(c, 200)
-                c = c[200:320, :]
+                #c = c[200:320, :]
 
             ax.clear()
             ax.axis('off')
@@ -152,7 +145,7 @@ class Preprocessor:
                 cmap = plt.cm.binary if binary else plt.cm.gray
             )
 
-            dst_file = os.path.join(dst_dir, file_name + '_' + str(i + 1).zfill(Preprocessor.FILL_DIGITS) + '_' + file_suffix + Preprocessor.IMAGE_FORMAT)
+            dst_file = os.path.join(dst_dir, file_name + '_' + str(i + 1).zfill(Preprocessor.FILL_DIGITS) + '.' + file_suffix + Preprocessor.IMAGE_FORMAT)
             fig.savefig(dst_file, frameon = True, transparent = False)
 
             Image.open(dst_file).convert('1' if binary else 'L').save(dst_file)

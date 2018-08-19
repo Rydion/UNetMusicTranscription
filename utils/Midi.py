@@ -18,33 +18,26 @@ class Midi:
     def __init__(self, multitrack):
         self._multitrack = multitrack
 
-    def plot(self):
-        fig, ax = pyano.plot(
-            self._multitrack,
-            ytick = 'pitch',
-            xtick = 'step'
-        )
+    def get_length_seconds(self):
+        tempo = self._multitrack.tempo[0] # Supose constant tempo
+        total_ticks = self._multitrack.get_maximal_length()
+        resolution = self._multitrack.beat_resolution
+        return (60*total_ticks)//(tempo*resolution)
+
+    def plot(self, x, plain = False):
+        fig, ax = self._plot(x, plain = plain)
         plt.show(fig)
         plt.close(fig)
 
-    def save(self, dest_path):
-        fig, ax = pyano.plot(
-            self._multitrack,
-            preset = 'plain',
-            ytick = 'pitch',
-            xtick = 'step'
-        )
-        fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
+    def save(self, dest_path, x, plain = False):
+        fig, ax = self._plot(x, plain = plain)
+        if plain:
+            fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
         fig.savefig(dest_path)
         plt.close(fig)
 
-    def get_img(self):
-        fig, ax = pyano.plot(
-            self._multitrack,
-            preset = 'plain',
-            ytick = 'pitch',
-            xtick = 'step'
-        )
+    def get_img(self, x, plain = True):
+        fig, ax = self._plot(x, plain = plain)
         fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
 
         fig.canvas.draw()
@@ -59,14 +52,15 @@ class Midi:
 
         return img
 
-    def get_chunk_generator(self, chunk_length):
-        img = self.get_img()
-        for i in range(0, np.shape(img)[1], chunk_length):
-            yield img[:, i:i + chunk_length]
+    def _plot(self, x, y = 1, plain = True):
+        default = plt.rcParams['figure.figsize']
+        plt.rcParams['figure.figsize'] = [x*4, y*16]
+        fig, ax = pyano.plot(
+            self._multitrack,
+            preset = 'plain' if plain else 'default',
+            ytick = 'pitch',
+            xtick = 'step'
+        )
+        plt.rcParams['figure.figsize'] = default
 
-    def get_length_seconds(self):
-        tempo = self._multitrack.tempo[0] # Supose constant tempo
-        total_ticks = self._multitrack.get_maximal_length()
-        resolution = self._multitrack.beat_resolution
-        return (60*total_ticks)//(tempo*resolution)
-
+        return fig, ax

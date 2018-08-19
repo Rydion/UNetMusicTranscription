@@ -18,3 +18,7 @@ def grey_scale(rgb_img):
 def binarize(grey_img, threshold):
     grey_img = grey_img.astype(np.uint8)
     return np.where(grey_img > threshold, 255, 0)
+
+def get_chunk_generator(matrix, chunk_length):
+    for i in range(0, np.shape(matrix)[1], chunk_length):
+        yield matrix[:, i:i + chunk_length]

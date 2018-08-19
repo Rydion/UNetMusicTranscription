@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>dd7ba320-ea2a-467f-9f26-17ea25329b5a</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>UNetMusicTranscription.py</StartupFile>
+    <StartupFile>UNetMusicTranscriptionAlex.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -28,8 +28,6 @@
     <Compile Include="AlternativeImplementation.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="midiviz\midiviz.py" />
-    <Compile Include="midiviz\__init__.py" />
     <Compile Include="preprocess.py" />
     <Compile Include="scripts\launcher.py" />
     <Compile Include="scripts\radio_util.py" />
@@ -48,19 +46,30 @@
     <Compile Include="tf_unet\unet.py" />
     <Compile Include="tf_unet\util.py" />
     <Compile Include="tf_unet\__init__.py" />
+    <Compile Include="UNetMusicTranscriptionAlex.py" />
     <Compile Include="unet\Trainer.py" />
     <Compile Include="unet\Unet.py" />
     <Compile Include="unet\util.py" />
     <Compile Include="unet\__init__.py" />
+    <Compile Include="unet_alex\Decoder.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="unet_alex\Encoder.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="unet_alex\Unet.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="unet_alex\__init__.py" />
     <Compile Include="utils\Midi.py" />
     <Compile Include="utils\AudioReader.py" />
     <Compile Include="utils\Preprocessor.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="utils\CQT.py" />
-    <Compile Include="utils\Spectrogram.py" />
+    <Compile Include="utils\Stft.py" />
     <Compile Include="utils\functions.py" />
-    <Compile Include="utils\Spectrum.py">
+    <Compile Include="utils\Spectrogram.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="utils\__init__.py" />
@@ -90,7 +99,7 @@
     <Folder Include="data\preprocessed\" />
     <Folder Include="data\raw\" />
     <Folder Include="data\raw\MIREX\" />
-    <Folder Include="midiviz\" />
+    <Folder Include="unet_alex\" />
     <Folder Include="scripts\" />
     <Folder Include="tests\" />
     <Folder Include="tf_unet\" />

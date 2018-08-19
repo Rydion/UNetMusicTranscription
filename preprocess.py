@@ -7,9 +7,10 @@ import os
 
 from utils.Preprocessor import Preprocessor
 
-DATASET = 'MIREX' # Piano MIREX Test
+TRANSFORMATION = 'cqt' # stft cqt
+DATASET = 'MIREX' # Piano MIREX
 DATA_SRC_PATH = os.path.join('./data/raw/', DATASET) 
-DATA_DST_PATH = os.path.join('./data/preprocessed/', DATASET)
+DATA_DST_PATH = os.path.join('./data/preprocessed/', DATASET + '.' + TRANSFORMATION)
 
 def main():
     preprocessor = Preprocessor()
@@ -18,7 +19,7 @@ def main():
         DATA_DST_PATH,
         gen_input = True,
         gen_output = True,
-        transformation = 'spectrogram'
+        transformation = TRANSFORMATION
     )
 
 

@@ -12,13 +12,15 @@ import matplotlib.pyplot as plt
 from tf_unet.unet import Unet, Trainer
 from tf_unet.image_util import ImageDataProvider
 
-DATASET = 'Piano' # Piano MIREX
-TRAINING_DATA_DIR = os.path.join('./data/preprocessed/', DATASET, '*')
-DST_DIR = './result/'
+DATASET = 'MIREX' # Piano MIREX
+TRANSFORMATION = 'cqt' # stft cqt
+TRAINING_DATASET = DATASET + '.' + TRANSFORMATION
+TRAINING_DATA_DIR = os.path.join('./data/preprocessed/', TRAINING_DATASET, '*')
+DST_DIR = './results/'
 IMAGE_FORMAT = '.png'
 DATA_SUFFIX = '_in' + IMAGE_FORMAT
 MASK_SUFFIX = '_out' + IMAGE_FORMAT
-NUM_EPOCHS = 50
+NUM_EPOCHS = 100
 TRAIN = True
 NUM_TESTS = 5
 
@@ -46,7 +48,13 @@ def predict(net_dir, net, data_provider, tests = 1):
         fig, ax = plt.subplots(1, 4, figsize = (12, 4))
         ax[0].imshow(x[0, ..., 0], aspect = 'auto', cmap = plt.cm.gray)
         ax[1].imshow(y[0, ..., 1], aspect = 'auto', cmap = plt.cm.gray)
-        ax[2].imshow(prediction[0, ..., 1], aspect = 'auto', cmap = plt.cm.gray)
+        ax[2].imshow(
+            prediction[0, ..., 1],
+            aspect = 'auto',
+            vmin = 0,
+            vmax = 1,
+            cmap = plt.cm.gray
+        )
         ax[3].imshow(mask[0, ..., 1], aspect = 'auto', cmap = plt.cm.gray)
         ax[0].set_title('Input')
         ax[1].set_title('Ground truth')
