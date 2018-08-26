@@ -27,25 +27,28 @@ class Stft(Spectrogram):
     def __init__(self, *args):
         super().__init__(*args)
 
-    def plot(self, color = True):
+    def plot(self, x, y, color = True):
         fig, ax = self._plot(color)
         plt.show(fig)
         plt.close(fig)
 
     def save(self, dest_path, x, y, color = True):
-        fig, ax = self._plot(color)
-        fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
-        ax.axis('off')
+        fig, ax = self._plot(x, y, color)
+        #fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
+        #ax.axis('off')
+
         fig.savefig(dest_path)
+
         plt.close(fig)
 
-    def get_img(self):
-        fig, ax = self._plot(color = False)
+    def get_img(self, x, y):
+        fig, ax = self._plot(x, y, color = False)
         fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
         ax.axis('off')
 
         fig.canvas.draw()
         img = np.fromstring(fig.canvas.tostring_rgb(), dtype = 'uint8')
+
         width, height = fig.get_size_inches()*fig.get_dpi()
         width = int(width)
         height = int(height)
@@ -55,8 +58,8 @@ class Stft(Spectrogram):
 
         return img
 
-    def _plot(self, color = True):
-        fig, ax = plt.subplots(1)
+    def _plot(self, x, y, color = True):
+        fig, ax = plt.subplots(1, figsize = (x*4, 16), dpi = 32)
         librosa.display.specshow(
             self.values,
             sr = self.sample_rate,
