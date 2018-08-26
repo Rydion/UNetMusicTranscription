@@ -26,11 +26,23 @@ def softmax_xentropy(x, y):
     )
     return tf.reduce_sum(tf.abs(ce))
 
+def normalize(x):
+    min = tf.reduce_min(x)
+    max = tf.reduce_max(x)
+    return tf.div(
+        tf.subtract(x, min),
+        tf.subtract(max, min)
+    )
+
 class UNetModel(object):
     def __init__(self, input, output, is_training):
+        self.input = input
+        self.output = output
+        self.is_training = is_training
+
         self.unet = UNet(
-            input,
-            is_training = is_training,
+            self.input,
+            is_training = self.is_training,
             name = 'transcription-unet',
             reuse = False
         )
@@ -39,7 +51,7 @@ class UNetModel(object):
 
         #self.cost = l1_loss(self.prediction, output)
         #self.cost = l2_loss(self.prediction, output)
-        self.cost = sigmoid_xentropy(self.prediction, output)
+        self.cost = sigmoid_xentropy(self.prediction, self.output)
         #self.cost = softmax_xentropy(self.prediction, output)
 
         self.optimizer = tf.train.AdamOptimizer(
@@ -53,5 +65,4 @@ class UNet(object):
         with tf.variable_scope(name, reuse = reuse):
             self.encoder = Encoder(input, is_training, reuse)
             self.decoder = Decoder(self.encoder.output, self.encoder, is_training, reuse)
-            #self.output = tanh(self.decoder.output)/2 + 0.5
-            self.output = self.decoder.output
+            self.output = tanh(self.decoder.output)/2 + 0.5
