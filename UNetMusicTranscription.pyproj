@@ -44,20 +44,17 @@
     <Compile Include="tf_unet\util.py" />
     <Compile Include="tf_unet\__init__.py" />
     <Compile Include="UNetMusicTranscriptionAlex.py" />
-    <Compile Include="unet\Trainer.py" />
-    <Compile Include="unet\Unet.py" />
-    <Compile Include="unet\util.py" />
+    <Compile Include="unet\Alex_updated_U-net.py" />
+    <Compile Include="unet\Decoder.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="unet\Encoder.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="unet\Unet.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="unet\__init__.py" />
-    <Compile Include="unet_alex\Decoder.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="unet_alex\Encoder.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="unet_alex\Unet.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="unet_alex\__init__.py" />
     <Compile Include="utils\Midi.py" />
     <Compile Include="utils\AudioReader.py" />
     <Compile Include="utils\Preprocessor.py">
@@ -111,10 +108,9 @@
     <Folder Include="data\raw\" />
     <Folder Include="data\raw\MIREX\" />
     <Folder Include="data\raw\Piano\" />
-    <Folder Include="unet_alex\" />
+    <Folder Include="unet\" />
     <Folder Include="scripts\" />
     <Folder Include="tf_unet\" />
-    <Folder Include="unet\" />
     <Folder Include="utils\" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
