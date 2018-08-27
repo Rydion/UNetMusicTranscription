@@ -79,8 +79,8 @@ class Wrapper(object):
                     print('{0}, {1}'.format(i, cost))
 
                 # each epoch
-                epoch = i//self.training_dataset_size
                 if i%self.training_dataset_size == 0:
+                    epoch = i//self.training_dataset_size
                     self._save_model(model_dst_dir, global_step = epoch)
                     self._plot(x, y, prediction, save = True, id = 'epoch-{0}'.format(epoch), dst_dir = plot_dest_dir)
 

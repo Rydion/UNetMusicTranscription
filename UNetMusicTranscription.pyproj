@@ -26,12 +26,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="preprocess.py" />
-    <Compile Include="tf_unet\image_gen.py" />
-    <Compile Include="tf_unet\image_util.py" />
-    <Compile Include="tf_unet\layers.py" />
-    <Compile Include="tf_unet\unet.py" />
-    <Compile Include="tf_unet\util.py" />
-    <Compile Include="tf_unet\__init__.py" />
     <Compile Include="UNetMusicTranscription.py" />
     <Compile Include="unet\Alex_updated_U-net.py" />
     <Compile Include="unet\Decoder.py">
@@ -97,7 +91,6 @@
     <Folder Include="data\raw\Piano\" />
     <Folder Include="results\" />
     <Folder Include="unet\" />
-    <Folder Include="tf_unet\" />
     <Folder Include="utils\" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
