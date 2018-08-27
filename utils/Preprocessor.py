@@ -42,7 +42,7 @@ class Preprocessor:
         true_len = num + remainder
         return true_len//dem
 
-    def preprocess(self, src_dir, dst_dir, gen_input = True, gen_output = True, transformation = 'spectrogram'):
+    def preprocess(self, src_dir, dst_dir, gen_input = True, gen_output = True, transformation = 'stft', duration_multiplier = 1):
         self._create_dst_dir(dst_dir)
 
         for file in os.listdir(src_dir):
@@ -94,7 +94,7 @@ class Preprocessor:
             else:
                 raise ValueError('Unknown transformation: ' + transformation + '.')
 
-            subdivisions = int(duration)
+            subdivisions = int(duration)*duration_multiplier
 
             if gen_input:
                 spectrogram.save(os.path.join(dst_dir, file_name + '.spectrum.png'), subdivisions, 84, color = False)

@@ -12,14 +12,18 @@ import matplotlib.image as mpimg
 
 from unet.Unet import UNetModel
 
+DURATION_MULTIPLIER = 2
 TRANSFORMATION = 'cqt' # stft cqt
 DATASET = 'MIREX' # Piano MIREX
-TRAINING_DATASET = DATASET + '.' + TRANSFORMATION
+TRAINING_DATASET = '{0}.{1}.{2}'.format(DATASET, TRANSFORMATION, DURATION_MULTIPLIER)
 DATA_DIR = './data/preprocessed/'
 TRAINING_DATA_DIR = os.path.join(DATA_DIR, TRAINING_DATASET)
 
+NUM_EPOCHS = 1
+BATCH_SIZE = 1
+
 RESULTS_DIR = './results/'
-MODEL_NAME = 'tanh'
+MODEL_NAME = '{0}-{1}-{2}-{3}-{4}-30'.format(DATASET, TRANSFORMATION, DURATION_MULTIPLIER, NUM_EPOCHS, BATCH_SIZE)
 DST_DIR = os.path.join(RESULTS_DIR, MODEL_NAME)
 MODEL_DST_DIR = os.path.join(DST_DIR, 'unet')
 PLOT_DST_DIR = os.path.join(DST_DIR, 'prediction')
@@ -28,15 +32,12 @@ IMAGE_FORMAT = '.png'
 DATA_SUFFIX = '.in'
 MASK_SUFFIX = '.out'
 
-LOAD = True
-NUM_ITERATIONS = 500
-BATCH_SIZE = 10
+LOAD = False
 
-def train(sess, dataset, model_dst_dir, plot_dest_dir, load = False):
-    iterator = dataset.make_one_shot_iterator()
-
-    input, output = iterator.get_next()
-    is_training = tf.placeholder(shape = (), dtype = bool)
+def train(sess, handle, training_dataset, model_dst_dir, plot_dest_dir, load = False):
+    training_iterator = tf.data.Iterator.from_string_handle(handle, training_dataset.output_types, training_dataset.output_shapes)
+    input, output = training_iterator.get_next()
+    is_training = tf.placeholder(dtype = bool, shape = ())
     model = UNetModel(
         input,
         output,
@@ -49,33 +50,54 @@ def train(sess, dataset, model_dst_dir, plot_dest_dir, load = False):
     else:
         sess.run(tf.global_variables_initializer())
 
-    for i in range(NUM_ITERATIONS):
-        _, cost = sess.run(
-            [model.train_op, model.cost],
-            { model.is_training: True }
-        )
+    i = 0
+    training_handle = sess.run(training_dataset.make_one_shot_iterator().string_handle())
+    try:
+        while True:
+            x, y, prediction, cost, _ = sess.run(
+                [model.input, model.output, model.prediction, model.cost, model.train_op],
+                feed_dict = { model.is_training: True, handle: training_handle }
+            )
 
-        if i%10 == 0:
+            if i%10 == 0:
+                print('{0}, {1}'.format(i, cost))
+
+            if i%100 == 0:
+                save_model(sess, model_dst_dir, global_step = i)
+                plot(x, y, prediction, save = True, id = 'train.{0}'.format(i), dst_dir = plot_dest_dir)
+
+            i = i + 1
+    except tf.errors.OutOfRangeError:
+        pass
+
+    return model
+
+def test(sess, model, handle, test_dataset):
+    test_iterator = tf.data.Iterator.from_string_handle(handle, test_dataset.output_types, test_dataset.output_shapes)
+    input, output = test_iterator.get_next()
+
+    i = 0
+    test_handle = sess.run(test_dataset.make_one_shot_iterator().string_handle())
+    try:
+        while True:
+            x, y = sess.run([input, output], { handle: test_handle })
+            prediction, cost = sess.run(
+                [model.prediction, model.cost],
+                feed_dict = { model.is_training: False, model.input: x, handle: test_handle }
+            )
+
             print('{0}, {1}'.format(i, cost))
+            plot(x, y, prediction, save = True, id = 'test.{0}'.format(i), dst_dir = plot_dest_dir)
 
-        if i%100 == 0:
-            save_model(sess, model_dst_dir, global_step = i)
-            test_model(sess, model, save_fig = True, id = i, dst_dir = plot_dest_dir)
-
-    save_model(sess, model_dst_dir)
-    test_model(sess, model, save_fig = False, id = 'final', dst_dir = plot_dest_dir)
+            i = i + 1
+    except tf.errors.OutOfRangeError:
+        pass
 
 def save_model(sess, dst_dir, global_step = None):
     saver = tf.train.Saver()
     save_path = saver.save(sess, os.path.join(dst_dir, 'model.ckpt'), global_step = global_step)
-    print('Model saved to: {0}'.format(save_path))
 
-def test_model(sess, model, save_fig = True, id = None, dst_dir = None):
-    x, y = sess.run([model.input, model.output])
-    prediction = sess.run([model.prediction], { model.is_training: False, model.input: x })
-    plot(x, y, prediction, save = save_fig, id = id, dst_dir = dst_dir)
-
-def get_dataset(src_dir, format, input_suffix, output_suffix, bach_size = 1):
+def get_dataset(src_dir, format, input_suffix, output_suffix, bach_size = 1, num_epochs = None):
     def parse_files(input_file, output_file):
         input_img_string = tf.read_file(input_file)
         output_img_string = tf.read_file(output_file)
@@ -104,54 +126,77 @@ def get_dataset(src_dir, format, input_suffix, output_suffix, bach_size = 1):
         if os.path.isfile(os.path.join(src_dir, output_file)):
             input_files.append(os.path.join(src_dir, input_file))
             output_files.append(os.path.join(src_dir, output_file))
-
+    
     dataset = tf.data.Dataset.from_tensor_slices((input_files, output_files))
     dataset = dataset.map(parse_files)
-    return dataset.batch(bach_size).repeat()
+    dataset = dataset.shuffle(20)
 
-def init():
-    if not os.path.isdir(DST_DIR):
-        os.makedirs(MODEL_DST_DIR)
-        os.makedirs(PREDICTION_DST_DIR)
+    dataset_size = len(input_files)
+    train_size = int(0.8*dataset_size)
+    training_dataset = dataset.take(train_size)
+    test_dataset = dataset.skip(train_size)
 
-    tf.reset_default_graph()
-    return tf.Session()
+    training_dataset = training_dataset.batch(bach_size).repeat(num_epochs)
+    test_dataset = test_dataset.batch(1)
+
+    return training_dataset, test_dataset
 
 def plot(x, y, prediction, save = False, id = 0, dst_dir = None):
-    print([np.amin(prediction), np.amax(prediction)])
-
     x = x[0, ..., 0]
     y = y[0, ..., 0]
-    prediction = prediction[0][0, ..., 0]
+    prediction = prediction[0, ..., 0]
+    mask07 = prediction > 0.7
+    mask08 = prediction > 0.8
+    mask09 = prediction > 0.9
+    mask1 = prediction > 0.99
 
-    fig, ax = plt.subplots(1, 3, figsize = (4*3, 16), dpi = 32)
+    fig, ax = plt.subplots(1, 7, figsize = (7*4, 16), dpi = 32)
     ax[0].imshow(x, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
     ax[1].imshow(y, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
-    ax[2].imshow(prediction, aspect = 'auto', cmap = plt.cm.gray)
+    ax[2].imshow(prediction, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
+    ax[3].imshow(mask07, aspect = 'auto', cmap = plt.cm.gray)
+    ax[4].imshow(mask08, aspect = 'auto', cmap = plt.cm.gray)
+    ax[5].imshow(mask09, aspect = 'auto', cmap = plt.cm.gray)
+    ax[6].imshow(mask1, aspect = 'auto', cmap = plt.cm.gray)
 
     if save:
-        fig.savefig(os.path.join(dst_dir, 'test.{0}.png'.format(id)))
+        fig.savefig(os.path.join(dst_dir, '{0}.png'.format(id)))
         plt.close(fig)
     else:
         plt.draw()
         plt.show()
 
+def init(dst_dir, model_dst_dir, plot_dst_dir):
+    if not os.path.isdir(dst_dir):
+        os.makedirs(model_dst_dir)
+        os.makedirs(plot_dst_dir)
+
+    tf.reset_default_graph()
+    return tf.Session()
+
 def main():
-    sess = init()
-    dataset = get_dataset(
+    sess = init(DST_DIR, MODEL_DST_DIR, PLOT_DST_DIR)
+
+    training_dataset, test_dataset = get_dataset(
         TRAINING_DATA_DIR,
         IMAGE_FORMAT,
         DATA_SUFFIX,
         MASK_SUFFIX,
-        bach_size = BATCH_SIZE
+        bach_size = BATCH_SIZE,
+        num_epochs = NUM_EPOCHS
     )
-    train(
+
+    handle = tf.placeholder(tf.string, shape = [], name = 'dataset-handle-placeholder')
+    model = train(
         sess,
-        dataset,
+        handle,
+        training_dataset,
         MODEL_DST_DIR,
         PLOT_DST_DIR,
         load = LOAD
     )
+
+    test(sess, model, handle, test_dataset)
 
 if __name__ == '__main__':
     main()
