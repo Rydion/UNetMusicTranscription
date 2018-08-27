@@ -19,13 +19,13 @@ TRAINING_DATASET = '{0}.{1}.{2}'.format(DATASET, TRANSFORMATION, DURATION_MULTIP
 DATA_DIR = './data/preprocessed/'
 TRAINING_DATA_DIR = os.path.join(DATA_DIR, TRAINING_DATASET)
 
-NUM_EPOCHS = 10
+NUM_EPOCHS = 1
 BATCH_SIZE = 1
 
 RESULTS_DIR = './results/'
 MODEL_NAME = '{0}-{1}-{2}-{3}-{4}-30'.format(DATASET, TRANSFORMATION, DURATION_MULTIPLIER, NUM_EPOCHS, BATCH_SIZE)
 DST_DIR = os.path.join(RESULTS_DIR, MODEL_NAME)
-MODEL_DST_DIR = os.path.join(DST_DIR, 'unet')
+MODEL_DIR = os.path.join(DST_DIR, 'unet')
 TRAINING_PLOT_DST_DIR = os.path.join(DST_DIR, 'training-prediction')
 TEST_PLOT_DST_DIR = os.path.join(DST_DIR, 'test-prediction')
 
@@ -33,70 +33,7 @@ IMAGE_FORMAT = '.png'
 DATA_SUFFIX = '.in'
 MASK_SUFFIX = '.out'
 
-LOAD = False
-
-def train(sess, handle, training_dataset, model_dst_dir, plot_dest_dir, load = False):
-    training_iterator = tf.data.Iterator.from_string_handle(handle, training_dataset.output_types, training_dataset.output_shapes)
-    input, output = training_iterator.get_next()
-    is_training = tf.placeholder(dtype = bool, shape = ())
-    model = UNetModel(
-        input,
-        output,
-        is_training
-    )
-
-    if load:
-        saver = tf.train.Saver()
-        saver.restore(sess, os.path.join(model_dst_dir, 'model.ckpt'))
-    else:
-        sess.run(tf.global_variables_initializer())
-
-    i = 0
-    training_handle = sess.run(training_dataset.make_one_shot_iterator().string_handle())
-    try:
-        while True:
-            x, y, prediction, cost, _ = sess.run(
-                [model.input, model.output, model.prediction, model.cost, model.train_op],
-                feed_dict = { model.is_training: True, handle: training_handle }
-            )
-
-            if i%10 == 0:
-                print('{0}, {1}'.format(i, cost))
-
-            if i%100 == 0:
-                save_model(sess, model_dst_dir, global_step = i)
-                plot(x, y, prediction, save = True, id = 'train.{0}'.format(i), dst_dir = plot_dest_dir)
-
-            i = i + 1
-    except tf.errors.OutOfRangeError:
-        pass
-
-    return model
-
-def test(sess, model, handle, test_dataset, plot_dest_dir):
-    test_iterator = tf.data.Iterator.from_string_handle(handle, test_dataset.output_types, test_dataset.output_shapes)
-    input, output = test_iterator.get_next()
-
-    i = 0
-    test_handle = sess.run(test_dataset.make_one_shot_iterator().string_handle())
-    try:
-        while True:
-            x, y = sess.run([input, output], { handle: test_handle })
-            prediction, cost = sess.run(
-                [model.prediction, model.cost],
-                feed_dict = { model.is_training: False, model.input: x, handle: test_handle }
-            )
-
-            print('{0}, {1}'.format(i, cost))
-            plot(x, y, prediction, save = True, id = 'test.{0}'.format(i), dst_dir = plot_dest_dir)
-
-            i = i + 1
-    except tf.errors.OutOfRangeError:
-        pass
-
-def save_model(sess, dst_dir, global_step = None):
-    saver = tf.train.Saver()
-    save_path = saver.save(sess, os.path.join(dst_dir, 'model.ckpt'), global_step = global_step)
+TRAIN = True
 
 def get_dataset(src_dir, format, input_suffix, output_suffix, bach_size = 1, num_epochs = None):
     def parse_files(input_file, output_file):
@@ -167,6 +104,84 @@ def plot(x, y, prediction, save = False, id = 0, dst_dir = None):
         plt.draw()
         plt.show()
 
+class Wrapper(object):
+    def __init__(self, sess, load = False, model_src_dir = None):
+        self.sess = sess
+
+        self.training_dataset, self.test_dataset = get_dataset(
+            TRAINING_DATA_DIR,
+            IMAGE_FORMAT,
+            DATA_SUFFIX,
+            MASK_SUFFIX,
+            bach_size = BATCH_SIZE,
+            num_epochs = NUM_EPOCHS
+        )
+
+        self.handle = tf.placeholder(tf.string, shape = [], name = 'dataset-handle-placeholder')
+        self.iterator = tf.data.Iterator.from_string_handle(self.handle, self.training_dataset.output_types, self.training_dataset.output_shapes)
+        self.training_handle = sess.run(self.training_dataset.make_one_shot_iterator().string_handle())
+        self.test_handle = sess.run(self.test_dataset.make_one_shot_iterator().string_handle())
+
+        self.input, self.output = self.iterator.get_next()
+        self.is_training = tf.placeholder(dtype = bool, shape = ())
+        self.model = UNetModel(
+            self.input,
+            self.output,
+            self.is_training
+        )
+
+        if load:
+            self._load_model(model_src_dir)
+        else:
+            sess.run(tf.global_variables_initializer())
+
+    def train(self, model_dst_dir, plot_dest_dir):
+        i = 0
+        try:
+            while True:
+                x, y, prediction, cost, _ = self.sess.run(
+                    [self.model.input, self.model.output, self.model.prediction, self.model.cost, self.model.train_op],
+                    feed_dict = { self.model.is_training: True, self.handle: self.training_handle }
+                )
+
+                if i%10 == 0:
+                    print('{0}, {1}'.format(i, cost))
+
+                if i%100 == 0:
+                    self._save_model(model_dst_dir, global_step = i)
+                    plot(x, y, prediction, save = True, id = 'train.{0}'.format(i), dst_dir = plot_dest_dir)
+
+                i = i + 1
+        except tf.errors.OutOfRangeError:
+            pass
+
+        self._save_model(model_dst_dir)
+
+    def test(self, plot_dest_dir):
+        i = 0
+        try:
+            while True:
+                x, y = self.sess.run([self.input, self.output], feed_dict = { self.handle: self.test_handle })
+                prediction, cost = self.sess.run(
+                    [self.model.prediction, self.model.cost],
+                    feed_dict = { self.model.is_training: False, self.model.input: x, self.handle: self.test_handle }
+                )
+
+                print('{0}, {1}'.format(i, cost))
+                plot(x, y, prediction, save = True, id = 'test.{0}'.format(i), dst_dir = plot_dest_dir)
+
+                i = i + 1
+        except tf.errors.OutOfRangeError:
+            pass
+
+    def _save_model(self, dst_dir, global_step = None):
+        saver = tf.train.Saver()
+        return saver.save(self.sess, os.path.join(dst_dir, 'model.ckpt'), global_step = global_step)
+
+    def _load_model(self, src_dir):
+        saver = tf.train.Saver()
+        saver.restore(self.sess, os.path.join(src_dir, 'model.ckpt'))
+
 def init(dst_dir, model_dst_dir, training_plot_dst_dir, test_plot_dst_dir):
     if not os.path.isdir(dst_dir):
         os.makedirs(model_dst_dir)
@@ -177,28 +192,15 @@ def init(dst_dir, model_dst_dir, training_plot_dst_dir, test_plot_dst_dir):
     return tf.Session()
 
 def main():
-    sess = init(DST_DIR, MODEL_DST_DIR, TRAINING_PLOT_DST_DIR, TEST_PLOT_DST_DIR)
+    sess = init(DST_DIR, MODEL_DIR, TRAINING_PLOT_DST_DIR, TEST_PLOT_DST_DIR)
 
-    training_dataset, test_dataset = get_dataset(
-        TRAINING_DATA_DIR,
-        IMAGE_FORMAT,
-        DATA_SUFFIX,
-        MASK_SUFFIX,
-        bach_size = BATCH_SIZE,
-        num_epochs = NUM_EPOCHS
-    )
+    if TRAIN:
+        wrapper = Wrapper(sess, load = False)
+        wrapper.train(MODEL_DIR, TRAINING_PLOT_DST_DIR)
+    else:
+        wrapper = Wrapper(sess, load = False, model_src_dir = MODEL_DIR)
 
-    handle = tf.placeholder(tf.string, shape = [], name = 'dataset-handle-placeholder')
-    model = train(
-        sess,
-        handle,
-        training_dataset,
-        MODEL_DST_DIR,
-        TRAINING_PLOT_DST_DIR,
-        load = LOAD
-    )
-
-    test(sess, model, handle, test_dataset, TEST_PLOT_DST_DIR)
+    wrapper.test(TEST_PLOT_DST_DIR)
 
 if __name__ == '__main__':
     main()

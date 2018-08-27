@@ -95,6 +95,7 @@
     <Folder Include="data\raw\" />
     <Folder Include="data\raw\MIREX\" />
     <Folder Include="data\raw\Piano\" />
+    <Folder Include="results\" />
     <Folder Include="unet\" />
     <Folder Include="tf_unet\" />
     <Folder Include="utils\" />
