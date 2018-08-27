@@ -1,6 +1,5 @@
 '''
 created: 2018-06-14
-edited: 2018-07-16
 author: Adrian Hintze @Rydion
 '''
 

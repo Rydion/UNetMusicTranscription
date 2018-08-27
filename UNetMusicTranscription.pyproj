@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>dd7ba320-ea2a-467f-9f26-17ea25329b5a</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>UNetMusicTranscriptionAlex.py</StartupFile>
+    <StartupFile>UNetMusicTranscription.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -25,25 +25,14 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="AlternativeImplementation.py">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="preprocess.py" />
-    <Compile Include="scripts\launcher.py" />
-    <Compile Include="scripts\radio_util.py" />
-    <Compile Include="scripts\rfi_launcher.py" />
-    <Compile Include="scripts\ufig_launcher.py" />
-    <Compile Include="scripts\ufig_util.py" />
-    <Compile Include="scripts\ultrasound_launcher.py" />
-    <Compile Include="scripts\ultrasound_util.py" />
-    <Compile Include="scripts\__init__.py" />
     <Compile Include="tf_unet\image_gen.py" />
     <Compile Include="tf_unet\image_util.py" />
     <Compile Include="tf_unet\layers.py" />
     <Compile Include="tf_unet\unet.py" />
     <Compile Include="tf_unet\util.py" />
     <Compile Include="tf_unet\__init__.py" />
-    <Compile Include="UNetMusicTranscriptionAlex.py" />
+    <Compile Include="UNetMusicTranscription.py" />
     <Compile Include="unet\Alex_updated_U-net.py" />
     <Compile Include="unet\Decoder.py">
       <SubType>Code</SubType>
@@ -67,7 +56,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="utils\__init__.py" />
-    <Compile Include="UNetMusicTranscription.py" />
   </ItemGroup>
   <ItemGroup>
     <Content Include=".editorconfig" />
@@ -100,7 +88,6 @@
     <Content Include="data\raw\Piano\Disklavier_07_G2_C3.wav" />
     <Content Include="LICENSE" />
     <Content Include="README.md" />
-    <Content Include="scripts\.gitignore" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="data\" />
@@ -109,7 +96,6 @@
     <Folder Include="data\raw\MIREX\" />
     <Folder Include="data\raw\Piano\" />
     <Folder Include="unet\" />
-    <Folder Include="scripts\" />
     <Folder Include="tf_unet\" />
     <Folder Include="utils\" />
   </ItemGroup>
