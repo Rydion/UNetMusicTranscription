@@ -12,18 +12,18 @@ import matplotlib.image as mpimg
 
 from unet.Unet import UNetModel
 
-DURATION_MULTIPLIER = 2
+DURATION_MULTIPLIER = 4
 TRANSFORMATION = 'cqt' # stft cqt
 DATASET = 'MIREX' # Piano MIREX
 TRAINING_DATASET = '{0}.{1}.{2}'.format(DATASET, TRANSFORMATION, DURATION_MULTIPLIER)
 DATA_DIR = './data/preprocessed/'
 TRAINING_DATA_DIR = os.path.join(DATA_DIR, TRAINING_DATASET)
 
-NUM_EPOCHS = 1
+NUM_EPOCHS = 10
 BATCH_SIZE = 1
 
 RESULTS_DIR = './results/'
-MODEL_NAME = '{0}-{1}-{2}-{3}-{4}-30'.format(DATASET, TRANSFORMATION, DURATION_MULTIPLIER, NUM_EPOCHS, BATCH_SIZE)
+MODEL_NAME = '{0}-{1}-{2}-{3}-{4}-40'.format(DATASET, TRANSFORMATION, DURATION_MULTIPLIER, NUM_EPOCHS, BATCH_SIZE)
 DST_DIR = os.path.join(RESULTS_DIR, MODEL_NAME)
 MODEL_DIR = os.path.join(DST_DIR, 'unet')
 TRAINING_PLOT_DST_DIR = os.path.join(DST_DIR, 'training-prediction')
@@ -35,80 +35,11 @@ MASK_SUFFIX = '.out'
 
 TRAIN = True
 
-def get_dataset(src_dir, format, input_suffix, output_suffix, bach_size = 1, num_epochs = None):
-    def parse_files(input_file, output_file):
-        input_img_string = tf.read_file(input_file)
-        output_img_string = tf.read_file(output_file)
-
-        input_img = tf.image.decode_png(input_img_string, channels = 1, dtype = tf.uint8)
-        output_img = tf.image.decode_png(output_img_string, channels = 1, dtype = tf.uint8)
-
-        input_img = tf.cast(input_img, tf.float32)/255
-        output_img = tf.cast(output_img, tf.float32)/255
-
-        return input_img, output_img
-
-    input_files = []
-    output_files = []
-    for file in os.listdir(src_dir):
-        file_name, file_extension = os.path.splitext(file)
-        if file_extension != format:
-            continue
-        if not file_name.endswith(input_suffix):
-            continue
-
-        input_file_name = file_name
-        input_file = file
-        output_file_name = os.path.splitext(file_name)[0] + output_suffix
-        output_file = output_file_name + file_extension
-        if os.path.isfile(os.path.join(src_dir, output_file)):
-            input_files.append(os.path.join(src_dir, input_file))
-            output_files.append(os.path.join(src_dir, output_file))
-    
-    dataset = tf.data.Dataset.from_tensor_slices((input_files, output_files))
-    dataset = dataset.map(parse_files)
-    dataset = dataset.shuffle(20)
-
-    dataset_size = len(input_files)
-    train_size = int(0.8*dataset_size)
-    training_dataset = dataset.take(train_size)
-    test_dataset = dataset.skip(train_size)
-
-    training_dataset = training_dataset.batch(bach_size).repeat(num_epochs)
-    test_dataset = test_dataset.batch(1)
-
-    return training_dataset, test_dataset
-
-def plot(x, y, prediction, save = False, id = 0, dst_dir = None):
-    x = x[0, ..., 0]
-    y = y[0, ..., 0]
-    prediction = prediction[0, ..., 0]
-    mask07 = prediction > 0.7
-    mask08 = prediction > 0.8
-    mask09 = prediction > 0.9
-    mask1 = prediction > 0.99
-
-    fig, ax = plt.subplots(1, 7, figsize = (7*4, 16), dpi = 32)
-    ax[0].imshow(x, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
-    ax[1].imshow(y, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
-    ax[2].imshow(prediction, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
-    ax[3].imshow(mask07, aspect = 'auto', cmap = plt.cm.gray)
-    ax[4].imshow(mask08, aspect = 'auto', cmap = plt.cm.gray)
-    ax[5].imshow(mask09, aspect = 'auto', cmap = plt.cm.gray)
-    ax[6].imshow(mask1, aspect = 'auto', cmap = plt.cm.gray)
-
-    if save:
-        fig.savefig(os.path.join(dst_dir, '{0}.png'.format(id)))
-        plt.close(fig)
-    else:
-        plt.draw()
-        plt.show()
-
 class Wrapper(object):
     def __init__(self, sess, load = False, model_src_dir = None):
         self.sess = sess
 
-        self.training_dataset, self.test_dataset = get_dataset(
+        self.training_dataset_size, self.test_dataset_size, self.training_dataset, self.test_dataset = self._get_dataset(
             TRAINING_DATA_DIR,
             IMAGE_FORMAT,
             DATA_SUFFIX,
@@ -136,7 +67,7 @@ class Wrapper(object):
             sess.run(tf.global_variables_initializer())
 
     def train(self, model_dst_dir, plot_dest_dir):
-        i = 0
+        i = 1
         try:
             while True:
                 x, y, prediction, cost, _ = self.sess.run(
@@ -144,21 +75,27 @@ class Wrapper(object):
                     feed_dict = { self.model.is_training: True, self.handle: self.training_handle }
                 )
 
-                if i%10 == 0:
+                if i%100 == 0:
                     print('{0}, {1}'.format(i, cost))
 
-                if i%100 == 0:
-                    self._save_model(model_dst_dir, global_step = i)
-                    plot(x, y, prediction, save = True, id = 'train.{0}'.format(i), dst_dir = plot_dest_dir)
+                # each epoch
+                epoch = i//self.training_dataset_size
+                if i%self.training_dataset_size == 0:
+                    self._save_model(model_dst_dir, global_step = epoch)
+                    self._plot(x, y, prediction, save = True, id = 'epoch-{0}'.format(epoch), dst_dir = plot_dest_dir)
 
-                i = i + 1
+                    test_error = self.test()
+                    print('Epoch {0} finished. Test error: {1}'.format(epoch, test_error))
+
+                i = i + np.shape(x)[0]
         except tf.errors.OutOfRangeError:
             pass
+        finally:
+            self._save_model(model_dst_dir)
 
-        self._save_model(model_dst_dir)
-
-    def test(self, plot_dest_dir):
-        i = 0
+    def test(self, plot = False, plot_dest_dir = None):
+        i = 1
+        total_cost = 0
         try:
             while True:
                 x, y = self.sess.run([self.input, self.output], feed_dict = { self.handle: self.test_handle })
@@ -167,12 +104,65 @@ class Wrapper(object):
                     feed_dict = { self.model.is_training: False, self.model.input: x, self.handle: self.test_handle }
                 )
 
-                print('{0}, {1}'.format(i, cost))
-                plot(x, y, prediction, save = True, id = 'test.{0}'.format(i), dst_dir = plot_dest_dir)
+                total_cost = total_cost + cost
+
+                if plot:
+                    self._plot(x, y, prediction, save = True, id = 'sample-{0}'.format(i), dst_dir = plot_dest_dir)
+
+                # each epoch
+                if i%self.training_dataset_size == 0:
+                    break
 
                 i = i + 1
         except tf.errors.OutOfRangeError:
             pass
+        finally:
+            return total_cost/i
+
+    def _get_dataset(self, src_dir, format, input_suffix, output_suffix, bach_size = 1, num_epochs = None):
+        def parse_files(input_file, output_file):
+            input_img_string = tf.read_file(input_file)
+            output_img_string = tf.read_file(output_file)
+
+            input_img = tf.image.decode_png(input_img_string, channels = 1, dtype = tf.uint8)
+            output_img = tf.image.decode_png(output_img_string, channels = 1, dtype = tf.uint8)
+
+            input_img = tf.cast(input_img, tf.float32)/255
+            output_img = tf.cast(output_img, tf.float32)/255
+
+            return input_img, output_img
+
+        input_files = []
+        output_files = []
+        for file in os.listdir(src_dir):
+            file_name, file_extension = os.path.splitext(file)
+            if file_extension != format:
+                continue
+            if not file_name.endswith(input_suffix):
+                continue
+
+            input_file_name = file_name
+            input_file = file
+            output_file_name = os.path.splitext(file_name)[0] + output_suffix
+            output_file = output_file_name + file_extension
+            if os.path.isfile(os.path.join(src_dir, output_file)):
+                input_files.append(os.path.join(src_dir, input_file))
+                output_files.append(os.path.join(src_dir, output_file))
+    
+        dataset = tf.data.Dataset.from_tensor_slices((input_files, output_files))
+        dataset = dataset.map(parse_files)
+        dataset = dataset.shuffle(20)
+
+        dataset_size = len(input_files)
+        training_dataset_size = int(0.8*dataset_size)
+        test_dataset_size = int(0.2*dataset_size)
+        training_dataset = dataset.take(training_dataset_size)
+        test_dataset = dataset.skip(training_dataset_size).take(test_dataset_size)
+
+        training_dataset = training_dataset.batch(bach_size).repeat(num_epochs)
+        test_dataset = test_dataset.batch(1).repeat()
+
+        return training_dataset_size, test_dataset_size, training_dataset, test_dataset
 
     def _save_model(self, dst_dir, global_step = None):
         saver = tf.train.Saver()
@@ -181,6 +171,31 @@ class Wrapper(object):
     def _load_model(self, src_dir):
         saver = tf.train.Saver()
         saver.restore(self.sess, os.path.join(src_dir, 'model.ckpt'))
+
+    def _plot(self, x, y, prediction, save = False, id = 0, dst_dir = None):
+        x = x[0, ..., 0]
+        y = y[0, ..., 0]
+        prediction = prediction[0, ..., 0]
+        mask07 = prediction > 0.7
+        mask08 = prediction > 0.8
+        mask09 = prediction > 0.9
+        mask1 = prediction > 0.99
+
+        fig, ax = plt.subplots(1, 7, figsize = (7*4, 16), dpi = 32)
+        ax[0].imshow(x, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
+        ax[1].imshow(y, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
+        ax[2].imshow(prediction, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
+        ax[3].imshow(mask07, aspect = 'auto', cmap = plt.cm.gray)
+        ax[4].imshow(mask08, aspect = 'auto', cmap = plt.cm.gray)
+        ax[5].imshow(mask09, aspect = 'auto', cmap = plt.cm.gray)
+        ax[6].imshow(mask1, aspect = 'auto', cmap = plt.cm.gray)
+
+        if save:
+            fig.savefig(os.path.join(dst_dir, '{0}.png'.format(id)))
+            plt.close(fig)
+        else:
+            plt.draw()
+            plt.show()
 
 def init(dst_dir, model_dst_dir, training_plot_dst_dir, test_plot_dst_dir):
     if not os.path.isdir(dst_dir):
@@ -200,7 +215,7 @@ def main():
     else:
         wrapper = Wrapper(sess, load = False, model_src_dir = MODEL_DIR)
 
-    wrapper.test(TEST_PLOT_DST_DIR)
+    wrapper.test(plot = True, plot_dest_dir = TEST_PLOT_DST_DIR)
 
 if __name__ == '__main__':
     main()

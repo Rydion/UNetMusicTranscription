@@ -7,7 +7,7 @@ import os
 
 from utils.Preprocessor import Preprocessor
 
-DURATION_MULTIPLIER = 2 # 1 for 1 second slices, 2 for 0.5 seconds, etc
+DURATION_MULTIPLIER = 4 # 1 for 1 second slices, 2 for 0.5 seconds, etc
 TRANSFORMATION = 'cqt' # stft cqt
 DATASET = 'MIREX' # Piano MIREX
 DATA_SRC_PATH = os.path.join('./data/raw/', DATASET) 
