@@ -12,14 +12,14 @@ import matplotlib.image as mpimg
 
 from unet.Unet import UNetModel
 
-DURATION_MULTIPLIER = 4
+DURATION_MULTIPLIER = 1
 TRANSFORMATION = 'cqt' # stft cqt
 DATASET = 'MIREX' # Piano MIREX
 TRAINING_DATASET = '{0}.{1}.{2}'.format(DATASET, TRANSFORMATION, DURATION_MULTIPLIER)
 DATA_DIR = './data/preprocessed/'
 TRAINING_DATA_DIR = os.path.join(DATA_DIR, TRAINING_DATASET)
 
-NUM_EPOCHS = 10
+NUM_EPOCHS = 1
 BATCH_SIZE = 1
 
 RESULTS_DIR = './results/'
@@ -67,13 +67,15 @@ class Wrapper(object):
             sess.run(tf.global_variables_initializer())
 
     def train(self, model_dst_dir, plot_dest_dir):
-        i = 1
+        i = 0
         try:
             while True:
                 x, y, prediction, cost, _ = self.sess.run(
                     [self.model.input, self.model.output, self.model.prediction, self.model.cost, self.model.train_op],
                     feed_dict = { self.model.is_training: True, self.handle: self.training_handle }
                 )
+
+                i = i + np.shape(x)[0]
 
                 if i%100 == 0:
                     print('{0}, {1}'.format(i, cost))
@@ -87,18 +89,20 @@ class Wrapper(object):
                     test_error = self.test()
                     print('Epoch {0} finished. Test error: {1}'.format(epoch, test_error))
 
-                i = i + np.shape(x)[0]
         except tf.errors.OutOfRangeError:
             pass
         finally:
             self._save_model(model_dst_dir)
 
     def test(self, plot = False, plot_dest_dir = None):
-        i = 1
+        i = 0
         total_cost = 0
         try:
             while True:
+                i = i + 1
+
                 x, y = self.sess.run([self.input, self.output], feed_dict = { self.handle: self.test_handle })
+
                 prediction, cost = self.sess.run(
                     [self.model.prediction, self.model.cost],
                     feed_dict = { self.model.is_training: False, self.model.input: x, self.handle: self.test_handle }
@@ -110,10 +114,9 @@ class Wrapper(object):
                     self._plot(x, y, prediction, save = True, id = 'sample-{0}'.format(i), dst_dir = plot_dest_dir)
 
                 # each epoch
-                if i%self.training_dataset_size == 0:
+                if i%self.test_dataset_size == 0:
                     break
 
-                i = i + 1
         except tf.errors.OutOfRangeError:
             pass
         finally:
@@ -148,7 +151,7 @@ class Wrapper(object):
             if os.path.isfile(os.path.join(src_dir, output_file)):
                 input_files.append(os.path.join(src_dir, input_file))
                 output_files.append(os.path.join(src_dir, output_file))
-    
+
         dataset = tf.data.Dataset.from_tensor_slices((input_files, output_files))
         dataset = dataset.map(parse_files)
         dataset = dataset.shuffle(20)
@@ -156,8 +159,10 @@ class Wrapper(object):
         dataset_size = len(input_files)
         training_dataset_size = int(0.8*dataset_size)
         test_dataset_size = int(0.2*dataset_size)
+        rounding_error = dataset_size - training_dataset_size - test_dataset_size
+        training_dataset_size = training_dataset_size + rounding_error
         training_dataset = dataset.take(training_dataset_size)
-        test_dataset = dataset.skip(training_dataset_size).take(test_dataset_size)
+        test_dataset = dataset.skip(training_dataset_size)
 
         training_dataset = training_dataset.batch(bach_size).repeat(num_epochs)
         test_dataset = test_dataset.batch(1).repeat()
