@@ -11,23 +11,27 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
 from unet.Unet import UNetModel
+from utils.Preprocessor import Preprocessor
 
-DURATION_MULTIPLIER = 1
-TRANSFORMATION = 'cqt' # stft cqt
 DATASET = 'MIREX' # Piano MIREX
-TRAINING_DATASET = '{0}.{1}.{2}'.format(DATASET, TRANSFORMATION, DURATION_MULTIPLIER)
-DATA_DIR = './data/preprocessed/'
-TRAINING_DATA_DIR = os.path.join(DATA_DIR, TRAINING_DATASET)
-
-NUM_EPOCHS = 1
+DURATION_MULTIPLIER = 1 # 1 for 1 second slices, 2 for 0.5 seconds, etc
+TRANSFORMATION = 'cqt' # stft cqt
+NUM_EPOCHS = 20
 BATCH_SIZE = 1
+
+DATA_SRC_DIR = os.path.join('./data/raw/', DATASET) 
+
+DATASET_DIR = './data/preprocessed/'
+FULL_DATASET = '{0}.{1}.{2}'.format(DATASET, TRANSFORMATION, DURATION_MULTIPLIER)
+FULL_DATASET_DIR = os.path.join(DATASET_DIR, FULL_DATASET)
 
 RESULTS_DIR = './results/'
 MODEL_NAME = '{0}-{1}-{2}-{3}-{4}-40'.format(DATASET, TRANSFORMATION, DURATION_MULTIPLIER, NUM_EPOCHS, BATCH_SIZE)
-DST_DIR = os.path.join(RESULTS_DIR, MODEL_NAME)
-MODEL_DIR = os.path.join(DST_DIR, 'unet')
-TRAINING_PLOT_DST_DIR = os.path.join(DST_DIR, 'training-prediction')
-TEST_PLOT_DST_DIR = os.path.join(DST_DIR, 'test-prediction')
+FULL_RESULTS_DIR = os.path.join(RESULTS_DIR, MODEL_NAME)
+
+MODEL_DST_DIR = os.path.join(FULL_RESULTS_DIR, 'unet')
+TRAINING_PLOT_DST_DIR = os.path.join(FULL_RESULTS_DIR, 'training-prediction')
+TEST_PLOT_DST_DIR = os.path.join(FULL_RESULTS_DIR, 'test-prediction')
 
 IMAGE_FORMAT = '.png'
 DATA_SUFFIX = '.in'
@@ -40,7 +44,7 @@ class Wrapper(object):
         self.sess = sess
 
         self.training_dataset_size, self.test_dataset_size, self.training_dataset, self.test_dataset = self._get_dataset(
-            TRAINING_DATA_DIR,
+            FULL_DATASET_DIR,
             IMAGE_FORMAT,
             DATA_SUFFIX,
             MASK_SUFFIX,
@@ -68,6 +72,8 @@ class Wrapper(object):
 
     def train(self, model_dst_dir, plot_dest_dir):
         i = 0
+        epoch = 1
+        epoch_cost = 0
         try:
             while True:
                 x, y, prediction, cost, _ = self.sess.run(
@@ -76,18 +82,20 @@ class Wrapper(object):
                 )
 
                 i = i + np.shape(x)[0]
-
-                if i%100 == 0:
-                    print('{0}, {1}'.format(i, cost))
+                epoch_cost = epoch_cost + cost
 
                 # each epoch
-                if i%self.training_dataset_size == 0:
-                    epoch = i//self.training_dataset_size
+                if i == self.training_dataset_size:
                     self._save_model(model_dst_dir, global_step = epoch)
                     self._plot(x, y, prediction, save = True, id = 'epoch-{0}'.format(epoch), dst_dir = plot_dest_dir)
 
+                    training_error = epoch_cost/i
                     test_error = self.test()
-                    print('Epoch {0} finished. Test error: {1}'.format(epoch, test_error))
+                    print('Epoch {0} finished. Training error: {1}. Test error: {2}'.format(epoch, training_error, test_error))
+
+                    i = 0
+                    epoch = epoch + 1
+                    epoch_cost = 0
 
         except tf.errors.OutOfRangeError:
             pass
@@ -99,22 +107,20 @@ class Wrapper(object):
         total_cost = 0
         try:
             while True:
-                i = i + 1
-
                 x, y = self.sess.run([self.input, self.output], feed_dict = { self.handle: self.test_handle })
-
                 prediction, cost = self.sess.run(
                     [self.model.prediction, self.model.cost],
                     feed_dict = { self.model.is_training: False, self.model.input: x, self.handle: self.test_handle }
                 )
 
+                i = i + 1
                 total_cost = total_cost + cost
 
                 if plot:
                     self._plot(x, y, prediction, save = True, id = 'sample-{0}'.format(i), dst_dir = plot_dest_dir)
 
-                # each epoch
-                if i%self.test_dataset_size == 0:
+                # one epoch
+                if i == self.test_dataset_size:
                     break
 
         except tf.errors.OutOfRangeError:
@@ -135,9 +141,10 @@ class Wrapper(object):
 
             return input_img, output_img
 
-        input_files = []
-        output_files = []
-        for file in os.listdir(src_dir):
+        training_input_files = []
+        training_output_files = []
+        training_dir = os.path.join(src_dir, 'training')
+        for file in os.listdir(training_dir):
             file_name, file_extension = os.path.splitext(file)
             if file_extension != format:
                 continue
@@ -148,24 +155,40 @@ class Wrapper(object):
             input_file = file
             output_file_name = os.path.splitext(file_name)[0] + output_suffix
             output_file = output_file_name + file_extension
-            if os.path.isfile(os.path.join(src_dir, output_file)):
-                input_files.append(os.path.join(src_dir, input_file))
-                output_files.append(os.path.join(src_dir, output_file))
+            if os.path.isfile(os.path.join(training_dir, output_file)):
+                training_input_files.append(os.path.join(training_dir, input_file))
+                training_output_files.append(os.path.join(training_dir, output_file))
 
-        dataset = tf.data.Dataset.from_tensor_slices((input_files, output_files))
-        dataset = dataset.map(parse_files)
-        dataset = dataset.shuffle(20)
+        test_input_files = []
+        test_output_files = []
+        test_dir = os.path.join(src_dir, 'test')
+        for file in os.listdir(test_dir):
+            file_name, file_extension = os.path.splitext(file)
+            if file_extension != format:
+                continue
+            if not file_name.endswith(input_suffix):
+                continue
 
-        dataset_size = len(input_files)
-        training_dataset_size = int(0.8*dataset_size)
-        test_dataset_size = int(0.2*dataset_size)
-        rounding_error = dataset_size - training_dataset_size - test_dataset_size
-        training_dataset_size = training_dataset_size + rounding_error
-        training_dataset = dataset.take(training_dataset_size)
-        test_dataset = dataset.skip(training_dataset_size)
+            input_file_name = file_name
+            input_file = file
+            output_file_name = os.path.splitext(file_name)[0] + output_suffix
+            output_file = output_file_name + file_extension
+            if os.path.isfile(os.path.join(test_dir, output_file)):
+                test_input_files.append(os.path.join(test_dir, input_file))
+                test_output_files.append(os.path.join(test_dir, output_file))
 
-        training_dataset = training_dataset.batch(bach_size).repeat(num_epochs)
-        test_dataset = test_dataset.batch(1).repeat()
+        training_dataset_size = len(training_input_files)
+        test_dataset_size = len(test_input_files)
+
+        training_dataset = tf.data.Dataset \
+                           .from_tensor_slices((training_input_files, training_output_files)) \
+                           .map(parse_files)
+        test_dataset = tf.data.Dataset \
+                       .from_tensor_slices((test_input_files, test_output_files)) \
+                       .map(parse_files)
+
+        training_dataset = training_dataset.batch(bach_size).shuffle(20).repeat(num_epochs)
+        test_dataset = test_dataset.batch(1).shuffle(20).repeat()
 
         return training_dataset_size, test_dataset_size, training_dataset, test_dataset
 
@@ -208,17 +231,24 @@ def init(dst_dir, model_dst_dir, training_plot_dst_dir, test_plot_dst_dir):
         os.makedirs(training_plot_dst_dir)
         os.makedirs(test_plot_dst_dir)
 
+    if not os.path.isdir(FULL_DATASET_DIR):
+        preprocessor = Preprocessor(DATA_SRC_DIR, FULL_DATASET_DIR)
+        preprocessor.preprocess(
+            transformation = TRANSFORMATION,
+            duration_multiplier = DURATION_MULTIPLIER
+        )
+
     tf.reset_default_graph()
     return tf.Session()
 
 def main():
-    sess = init(DST_DIR, MODEL_DIR, TRAINING_PLOT_DST_DIR, TEST_PLOT_DST_DIR)
+    sess = init(FULL_RESULTS_DIR, MODEL_DST_DIR, TRAINING_PLOT_DST_DIR, TEST_PLOT_DST_DIR)
 
     if TRAIN:
         wrapper = Wrapper(sess, load = False)
-        wrapper.train(MODEL_DIR, TRAINING_PLOT_DST_DIR)
+        wrapper.train(MODEL_DST_DIR, TRAINING_PLOT_DST_DIR)
     else:
-        wrapper = Wrapper(sess, load = False, model_src_dir = MODEL_DIR)
+        wrapper = Wrapper(sess, load = False, model_src_dir = MODEL_DST_DIR)
 
     wrapper.test(plot = True, plot_dest_dir = TEST_PLOT_DST_DIR)
 

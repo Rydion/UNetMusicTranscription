@@ -10,14 +10,13 @@ from utils.Preprocessor import Preprocessor
 DURATION_MULTIPLIER = 4 # 1 for 1 second slices, 2 for 0.5 seconds, etc
 TRANSFORMATION = 'cqt' # stft cqt
 DATASET = 'MIREX' # Piano MIREX
-DATA_SRC_PATH = os.path.join('./data/raw/', DATASET) 
-DATA_DST_PATH = os.path.join('./data/preprocessed/', '{0}.{1}.{2}'.format(DATASET, TRANSFORMATION, DURATION_MULTIPLIER))
+DATA_SRC_PATH = os.path.join('./data/raw/', DATASET)
+FULL_DATASET = '{0}.{1}.{2}'.format(DATASET, TRANSFORMATION, DURATION_MULTIPLIER)
+DATASET_DST_PATH = os.path.join('./data/preprocessed/', FULL_DATASET)
  
 def main():
-    preprocessor = Preprocessor()
+    preprocessor = Preprocessor(DATA_SRC_PATH, DATASET_DST_PATH)
     preprocessor.preprocess(
-        DATA_SRC_PATH,
-        DATA_DST_PATH,
         gen_input = True,
         gen_output = True,
         transformation = TRANSFORMATION,
