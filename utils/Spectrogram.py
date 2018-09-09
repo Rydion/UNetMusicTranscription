@@ -22,18 +22,18 @@ class Spectrogram(ABC):
         self._values = values
         self._sample_rate = sample_rate
 
-    def plot(self):
-        fig, ax = self._plot(color)
+    def plot(self, x, y, color = True):
+        fig, ax = self._plot(x, y, color)
         plt.show(fig)
         plt.close(fig)
 
-    def save(self):
+    def save(self, dst_path, x, y, color = True):
         fig, ax = self._plot(x, y, color)
-        fig.savefig(dest_path)
+        fig.savefig(dst_path)
         plt.close(fig)
 
-    def get_img(self):
-        fig, ax = self._plot(x, y, color = False)
+    def get_img(self, x, y, color = True):
+        fig, ax = self._plot(x, y, color)
         fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
         ax.axis('off')
 
@@ -50,7 +50,7 @@ class Spectrogram(ABC):
         return img
 
     @abstractmethod
-    def _plot(self):
+    def _plot(self, x, y, color):
         pass
 
     @property

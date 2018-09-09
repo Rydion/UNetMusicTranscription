@@ -3,6 +3,7 @@ author: Adrian Hintze @Rydion
 '''
 
 import librosa
+import librosa.display
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -25,8 +26,8 @@ class CQT(Spectrogram):
     def __init__(self, *args):
         super().__init__(*args)
 
-    def _plot(self, x, y, color = True):
-        fig, ax = plt.subplots(1, figsize = (x*4, 16), dpi = 32)
+    def _plot(self, x, y, color):
+        fig, ax = plt.subplots(1, figsize = (x*4, 16))
         librosa.display.specshow(
             self.values,
             sr = self.sample_rate,

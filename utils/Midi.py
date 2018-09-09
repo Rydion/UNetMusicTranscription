@@ -53,14 +53,14 @@ class Midi:
         return img
 
     def _plot(self, x, y = 1, plain = True):
-        default = plt.rcParams['figure.figsize']
-        plt.rcParams['figure.figsize'] = [x*4, y*16]
+        default_figsize = plt.rcParams['figure.figsize']
+        plt.rcParams['figure.figsize'] = [x*4, 16]
         fig, ax = pyano.plot(
             self._multitrack,
             preset = 'plain' if plain else 'default',
             ytick = 'pitch',
             xtick = 'step'
         )
-        plt.rcParams['figure.figsize'] = default
+        plt.rcParams['figure.figsize'] = default_figsize
 
         return fig, ax

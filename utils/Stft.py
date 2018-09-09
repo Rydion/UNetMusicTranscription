@@ -3,6 +3,7 @@ author: Adrian Hintze @Rydion
 '''
 
 import librosa
+import librosa.display
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -23,7 +24,7 @@ class Stft(Spectrogram):
     def __init__(self, *args):
         super().__init__(*args)
 
-    def _plot(self, x, y, color = True):
+    def _plot(self, x, y, color):
         fig, ax = plt.subplots(1, figsize = (x*4, 16), dpi = 32)
         librosa.display.specshow(
             self.values,

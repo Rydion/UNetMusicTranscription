@@ -24,7 +24,7 @@ plt.rcParams['figure.dpi'] = 32
 
 class Preprocessor:
     IMAGE_FORMAT = '.png'
-    DOWNSAMPLE_RATE = 8192 #16384 #Hz
+    DOWNSAMPLE_RATE = 16384 #16384 #Hz
     SFFT_WINDOW_LENGTH = 1024
     SFFT_STRIDE = SFFT_WINDOW_LENGTH//2
     FILL_DIGITS = 4
@@ -107,6 +107,8 @@ class Preprocessor:
                 midi.save(os.path.join(self.dst_dir, file_name + '.midi.png'), subdivisions)
                 chunks = get_chunk_generator(midi_img, slice_length)
                 self._save_sliced(chunks, file_name, file_suffix = Preprocessor.OUTPUT_SUFFIX, binary = True)
+
+            exit()
 
             # Split into train/test by class
             self._split()
