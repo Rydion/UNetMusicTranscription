@@ -1,3 +1,7 @@
+'''
+author: Adrian Hintze @Rydion
+'''
+
 import tensorflow as tf
 
 def conv(inputs, filters, kernel_size, stride):

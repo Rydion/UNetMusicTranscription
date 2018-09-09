@@ -1,13 +1,10 @@
 '''
-created: 2018-06-15
-edited: 2018-07-16
 author: Adrian Hintze @Rydion
 '''
 
 import numpy as np
 import matplotlib.pyplot as plt
 
-from scipy import signal
 from abc import ABC, abstractmethod
 from utils.functions import normalize_array
 
@@ -25,16 +22,35 @@ class Spectrogram(ABC):
         self._values = values
         self._sample_rate = sample_rate
 
-    @abstractmethod
     def plot(self):
-        pass
+        fig, ax = self._plot(color)
+        plt.show(fig)
+        plt.close(fig)
 
-    @abstractmethod
     def save(self):
-        pass
+        fig, ax = self._plot(x, y, color)
+        fig.savefig(dest_path)
+        plt.close(fig)
+
+    def get_img(self):
+        fig, ax = self._plot(x, y, color = False)
+        fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
+        ax.axis('off')
+
+        fig.canvas.draw()
+        img = np.fromstring(fig.canvas.tostring_rgb(), dtype = 'uint8')
+
+        width, height = fig.get_size_inches()*fig.get_dpi()
+        width = int(width)
+        height = int(height)
+        img = img.reshape(height, width, 3)
+
+        plt.close(fig)
+
+        return img
 
     @abstractmethod
-    def get_img(self):
+    def _plot(self):
         pass
 
     @property

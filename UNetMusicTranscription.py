@@ -1,5 +1,4 @@
 '''
-created: 2018-05-31
 author: Adrian Hintze @Rydion
 '''
 
@@ -14,7 +13,7 @@ from unet.Unet import UNetModel
 from utils.Preprocessor import Preprocessor
 
 DATASET = 'MIREX' # Piano MIREX
-DURATION_MULTIPLIER = 1 # 1 for 1 second slices, 2 for 0.5 seconds, etc
+DURATION_MULTIPLIER = 4 # 1 for 1 second slices, 2 for 0.5 seconds, etc
 TRANSFORMATION = 'cqt' # stft cqt
 NUM_EPOCHS = 20
 BATCH_SIZE = 1

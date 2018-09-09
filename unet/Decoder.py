@@ -1,3 +1,7 @@
+'''
+author: Adrian Hintze @Rydion
+'''
+
 import tensorflow as tf
 
 def deconv(inputs, filters, kernel_size, stride):

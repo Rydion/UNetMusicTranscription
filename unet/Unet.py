@@ -1,3 +1,7 @@
+'''
+author: Adrian Hintze @Rydion
+'''
+
 import tensorflow as tf
 
 from unet.Encoder import Encoder
@@ -67,7 +71,6 @@ class UNetModel(object):
         )
 
         self._prediction = self.unet.output
-        #self.prediction = tanh(self._prediction)/2 + 0.5
         self.prediction = sigmoid(self._prediction)
 
         #self.cost = l1_loss(self.prediction, self.output)

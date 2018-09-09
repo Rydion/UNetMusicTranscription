@@ -1,5 +1,4 @@
 '''
-created: 2018-07-16
 author: Adrian Hintze @Rydion
 '''
 
@@ -25,7 +24,7 @@ plt.rcParams['figure.dpi'] = 32
 
 class Preprocessor:
     IMAGE_FORMAT = '.png'
-    DOWNSAMPLE_RATE = 16000 #Hz
+    DOWNSAMPLE_RATE = 8192 #16384 #Hz
     SFFT_WINDOW_LENGTH = 1024
     SFFT_STRIDE = SFFT_WINDOW_LENGTH//2
     FILL_DIGITS = 4
@@ -67,26 +66,16 @@ class Preprocessor:
             print('Generating input/output for %s.' % file_name)
 
             # Read original files
+            midi = Midi.from_file(os.path.join(self.src_dir, file_name + '.mid'))
+            duration = midi.get_length_seconds()
+
             sample_rate, samples = AudioReader.read_wav(
                 os.path.join(self.src_dir, file),
                 as_mono = True,
                 downsample = True,
-                downsample_rate = Preprocessor.DOWNSAMPLE_RATE
+                downsample_rate = Preprocessor.DOWNSAMPLE_RATE,
+                duration = duration
             )
-
-            midi = Midi.from_file(os.path.join(self.src_dir, file_name + '.mid'))
-
-            # If input and output have different lengths we still want to use the data
-            duration = min(midi.get_length_seconds(), AudioReader.calc_signal_length_seconds(samples, sample_rate))
-
-            if duration < AudioReader.calc_signal_length_seconds(samples, sample_rate):
-                sample_rate, samples = AudioReader.read_wav(
-                    os.path.join(self.src_dir, file),
-                    as_mono = True,
-                    downsample = True,
-                    downsample_rate = Preprocessor.DOWNSAMPLE_RATE,
-                    duration = duration
-                )
 
             if transformation == 'stft':
                 spectrogram = Stft.from_audio(
@@ -121,7 +110,6 @@ class Preprocessor:
 
             # Split into train/test by class
             self._split()
-            break
 
             # Output aesthetics
             print()

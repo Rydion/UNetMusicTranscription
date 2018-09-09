@@ -1,5 +1,4 @@
 '''
-created: 2018-06-15
 author: Adrian Hintze @Rydion
 '''
 
