@@ -49,7 +49,7 @@ class Preprocessor:
         self.training_dir = os.path.join(self.dst_dir, 'training')
         self.test_dir = os.path.join(self.dst_dir, 'test')
 
-    def preprocess(self, gen_input = True, gen_output = True, transformation = 'stft', duration_multiplier = 1):
+    def preprocess(self, gen_input = True, gen_output = True, transformation = 'stft', duration_multiplier = 1, color = False):
         self._delete_dst_dir()
         self._create_dst_dirs()
 
@@ -68,6 +68,7 @@ class Preprocessor:
             # Read original files
             midi = Midi.from_file(os.path.join(self.src_dir, file_name + '.mid'))
             duration = midi.get_length_seconds()
+            print(duration)
 
             sample_rate, samples = AudioReader.read_wav(
                 os.path.join(self.src_dir, file),
@@ -92,23 +93,24 @@ class Preprocessor:
             else:
                 raise ValueError('Unknown transformation: ' + transformation + '.')
 
-            subdivisions = int(duration)*duration_multiplier
-            spectrogram_img = spectrogram.get_img(subdivisions, 84)
-            midi_img = midi.get_img(subdivisions)
+            duration = int(duration)
+            spectrogram_img = spectrogram.get_img(duration, 84, color = color)
+            midi_img = midi.get_img(duration, plain = True)
             # Same for both images
+            subdivisions = duration*duration_multiplier
             slice_length = Preprocessor.calc_rounded_slice_length(np.shape(spectrogram_img)[1], subdivisions)
 
             if gen_input:
-                spectrogram.save(os.path.join(self.dst_dir, file_name + '.spectrogram.png'), subdivisions, 84, color = False)
+                spectrogram.save(os.path.join(self.dst_dir, file_name + '.spectrogram.png'), duration, 84, color = color)
                 chunks = get_chunk_generator(spectrogram_img, slice_length)
                 self._save_sliced(chunks, file_name, file_suffix = Preprocessor.INPUT_SUFFIX, binary = False)
 
             if gen_output:
-                midi.save(os.path.join(self.dst_dir, file_name + '.midi.png'), subdivisions)
+                midi.save(os.path.join(self.dst_dir, file_name + '.midi.png'), duration, plain = False)
                 chunks = get_chunk_generator(midi_img, slice_length)
                 self._save_sliced(chunks, file_name, file_suffix = Preprocessor.OUTPUT_SUFFIX, binary = True)
 
-            exit()
+            #exit()
 
             # Split into train/test by class
             self._split()
@@ -127,7 +129,7 @@ class Preprocessor:
         os.makedirs(self.training_dir)
         os.makedirs(self.test_dir)
 
-    def _save_sliced(self, chunks, file_name, file_suffix = '', binary = False):
+    def _save_sliced(self, chunks, file_name, file_suffix = '', binary = False, color = True):
         fig, ax = plt.subplots(1)
         fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
 
@@ -151,13 +153,19 @@ class Preprocessor:
                 aspect = 'auto',
                 vmin = 0,
                 vmax = 255 if binary else 1,
-                cmap = plt.cm.binary if binary else plt.cm.gray
+                cmap = plt.cm.binary if binary else (None if color else  plt.cm.gray)
             )
 
             dst_file = os.path.join(self.dst_dir, file_name + '_' + str(i + 1).zfill(Preprocessor.FILL_DIGITS) + '.' + file_suffix + Preprocessor.IMAGE_FORMAT)
             fig.savefig(dst_file, frameon = True, transparent = False)
 
-            Image.open(dst_file).convert('1' if binary else 'L').save(dst_file)
+            if binary:
+                Image.open(dst_file).convert('1').save(dst_file)
+            else:
+                if color:
+                    Image.open(dst_file).save(dst_file)
+                else:
+                    Image.open(dst_file).convert('L').save(dst_file)
         end = time.clock()
         print('Saved all slices in %.2f seconds.' % (end - start))
 

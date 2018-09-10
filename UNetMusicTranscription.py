@@ -12,11 +12,12 @@ import matplotlib.image as mpimg
 from unet.Unet import UNetModel
 from utils.Preprocessor import Preprocessor
 
+COLOR = False
 DATASET = 'MIREX' # Piano MIREX
 DURATION_MULTIPLIER = 4 # 1 for 1 second slices, 2 for 0.5 seconds, etc
 TRANSFORMATION = 'cqt' # stft cqt
-NUM_EPOCHS = 20
-BATCH_SIZE = 1
+NUM_EPOCHS = 10
+BATCH_SIZE = 8
 
 DATA_SRC_DIR = os.path.join('./data/raw/', DATASET) 
 
@@ -209,7 +210,7 @@ class Wrapper(object):
         mask1 = prediction > 0.99
 
         fig, ax = plt.subplots(1, 7, figsize = (7*4, 16), dpi = 32)
-        ax[0].imshow(x, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
+        ax[0].imshow(x, vmin = 0, vmax = 1, aspect = 'auto', cmap = None if COLOR else plt.cm.gray)
         ax[1].imshow(y, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
         ax[2].imshow(prediction, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
         ax[3].imshow(mask07, aspect = 'auto', cmap = plt.cm.gray)
@@ -234,7 +235,8 @@ def init(dst_dir, model_dst_dir, training_plot_dst_dir, test_plot_dst_dir):
         preprocessor = Preprocessor(DATA_SRC_DIR, FULL_DATASET_DIR)
         preprocessor.preprocess(
             transformation = TRANSFORMATION,
-            duration_multiplier = DURATION_MULTIPLIER
+            duration_multiplier = DURATION_MULTIPLIER,
+            color = COLOR
         )
 
     tf.reset_default_graph()

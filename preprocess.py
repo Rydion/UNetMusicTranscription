@@ -6,9 +6,10 @@ import os
 
 from utils.Preprocessor import Preprocessor
 
-DURATION_MULTIPLIER = 1 # 1 for 1 second slices, 2 for 0.5 seconds, etc
+COLOR = False
+DURATION_MULTIPLIER = 4 # slices of 1/DURATION_MULTIPLIER seconds
 TRANSFORMATION = 'cqt' # stft cqt
-DATASET = 'Piano' # Piano MIREX
+DATASET = 'A-MAPS-AkPnBcht' # Piano MIREX A-MAPS-AkPnBcht
 DATA_SRC_PATH = os.path.join('./data/raw/', DATASET)
 FULL_DATASET = '{0}.{1}.{2}'.format(DATASET, TRANSFORMATION, DURATION_MULTIPLIER)
 DATASET_DST_PATH = os.path.join('./data/preprocessed/', FULL_DATASET)
@@ -19,7 +20,8 @@ def main():
         gen_input = True,
         gen_output = True,
         transformation = TRANSFORMATION,
-        duration_multiplier = DURATION_MULTIPLIER
+        duration_multiplier = DURATION_MULTIPLIER,
+        color = COLOR
     )
 
 

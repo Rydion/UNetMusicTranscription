@@ -1,5 +1,4 @@
 '''
-created: 2018-06-15
 author: Adrian Hintze @Rydion
 '''
 
@@ -13,16 +12,28 @@ class Midi:
     def from_file(file_path):
         multitrack = pyano.parse(file_path)
         multitrack.assign_constant(127)
+        multitrack.trim_trailing_silence()
+        multitrack.remove_empty_tracks()
+        multitrack.pad_to_same()
+        '''
+        multitrack.merge_tracks(
+            mode = 'max',
+            is_drum = False,
+            program = 0,
+            remove_merged = True
+        )
+        '''
         return Midi(multitrack)
 
     def __init__(self, multitrack):
         self._multitrack = multitrack
+        self._trim()
 
     def get_length_seconds(self):
         tempo = self._multitrack.tempo[0] # Supose constant tempo
         total_ticks = self._multitrack.get_maximal_length()
         resolution = self._multitrack.beat_resolution
-        return (60*total_ticks)//(tempo*resolution)
+        return (60*total_ticks)/(tempo*resolution)
 
     def plot(self, x, plain = False):
         fig, ax = self._plot(x, plain = plain)
@@ -64,3 +75,16 @@ class Midi:
         plt.rcParams['figure.figsize'] = default_figsize
 
         return fig, ax
+
+    def _trim(self):
+        duration = self.get_length_seconds()
+        duration = int(duration)
+        total_ticks = self._get_ticks_from_seconds(duration)
+        for i, t in enumerate(self._multitrack.tracks):
+            self._multitrack.tracks[i] = t[:total_ticks]
+
+    def _get_ticks_from_seconds(self, duration):
+        tempo = self._multitrack.tempo[0] # Supose constant tempo
+        total_ticks = self._multitrack.get_maximal_length()
+        resolution = self._multitrack.beat_resolution
+        return int(duration*(tempo*resolution)//60)
