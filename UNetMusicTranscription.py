@@ -13,10 +13,10 @@ from unet.Unet import UNetModel
 from utils.Preprocessor import Preprocessor
 
 COLOR = False
-DATASET = 'MIREX' # Piano MIREX
-DURATION_MULTIPLIER = 4 # 1 for 1 second slices, 2 for 0.5 seconds, etc
-TRANSFORMATION = 'cqt' # stft cqt
-NUM_EPOCHS = 10
+DATASET = 'mirex' # mirex
+DURATION_MULTIPLIER = 8 # slices of 1/DURATION_MULTIPLIER seconds
+TRANSFORMATION = 'cqt' # cqt stft
+NUM_EPOCHS = 5
 BATCH_SIZE = 8
 
 DATA_SRC_DIR = os.path.join('./data/raw/', DATASET) 
@@ -26,7 +26,7 @@ FULL_DATASET = '{0}.{1}.{2}'.format(DATASET, TRANSFORMATION, DURATION_MULTIPLIER
 FULL_DATASET_DIR = os.path.join(DATASET_DIR, FULL_DATASET)
 
 RESULTS_DIR = './results/'
-MODEL_NAME = '{0}-{1}-{2}-{3}-{4}-40'.format(DATASET, TRANSFORMATION, DURATION_MULTIPLIER, NUM_EPOCHS, BATCH_SIZE)
+MODEL_NAME = '{0}-{1}-{2}-{3}-{4}-50'.format(DATASET, TRANSFORMATION, DURATION_MULTIPLIER, NUM_EPOCHS, BATCH_SIZE)
 FULL_RESULTS_DIR = os.path.join(RESULTS_DIR, MODEL_NAME)
 
 MODEL_DST_DIR = os.path.join(FULL_RESULTS_DIR, 'unet')

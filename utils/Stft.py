@@ -24,8 +24,9 @@ class Stft(Spectrogram):
     def __init__(self, *args):
         super().__init__(*args)
 
-    def _plot(self, x, y, color):
-        fig, ax = plt.subplots(1, figsize = (x*4, 16), dpi = 32)
+    def _plot(self, mult_x, mult_y, color):
+        figsize_x, figsize_y = plt.rcParams['figure.figsize']
+        fig, ax = plt.subplots(1, figsize = (mult_x*figsize_x, figsize_y))
         librosa.display.specshow(
             self.values,
             sr = self.sample_rate,

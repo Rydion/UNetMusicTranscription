@@ -40,14 +40,15 @@ def sigmoid_xentropy(x, y):
         labels = y,
         logits = x
     )
-    return tf.reduce_sum(ce)
+    return tf.reduce_mean(ce)
     '''
-    ce2 = tf.nn.weighted_cross_entropy_with_logits(
+    ce = tf.nn.weighted_cross_entropy_with_logits(
         targets = y,
         logits = x,
-        pos_weight = 40
+        pos_weight = 50
     )
-    return tf.reduce_mean(ce2)
+    
+    return tf.reduce_mean(ce)
 
 def normalize(x):
     min = tf.reduce_min(x)

@@ -16,7 +16,7 @@ from utils.Midi import Midi
 from utils.functions import grey_scale, binarize, get_chunk_generator
 
 plt.rcParams['figure.figsize'] = [4, 16]
-plt.rcParams['figure.dpi'] = 32
+plt.rcParams['figure.dpi'] = 16
 
 # TODO:
 #   support other extensions apart from wav
