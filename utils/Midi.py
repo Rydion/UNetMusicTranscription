@@ -5,7 +5,11 @@ author: Adrian Hintze @Rydion
 import numpy as np
 import matplotlib.pyplot as plt
 
+import pretty_midi
 import pypianoroll as pyano
+
+# https://github.com/craffel/pretty-midi/issues/112
+pretty_midi.pretty_midi.MAX_TICK = 1e10 # Pretty MIDI does some stuff internally that doesn't allow to load MAPS
 
 class Midi:
     @staticmethod
@@ -24,7 +28,7 @@ class Midi:
             program = 0,
             remove_merged = True
         )
-        
+
         return Midi(multitrack)
 
     def __init__(self, multitrack):
@@ -60,12 +64,8 @@ class Midi:
         return img
 
     def get_length_seconds(self):
-        seconds = 0
-        for i in range(self._multitrack.get_maximal_length()):
-            tempo = self._multitrack.tempo[i]
-            resolution = self._multitrack.beat_resolution
-            seconds = seconds + 60/(tempo*resolution)
-        return round(seconds, 2)
+        # Length should include everything, including trailing silence
+        return self._get_length_seconds(self._multitrack.get_maximal_length())
 
     def _plot(self, mult_x, mult_y, plain):
         default_figsize = plt.rcParams['figure.figsize']
@@ -84,23 +84,22 @@ class Midi:
         duration = self.get_length_seconds()
         duration = int(duration)
         total_ticks = self._get_ticks_from_seconds(duration)
-        print(self.get_length_seconds())
         for i in range(len(self._multitrack.tracks)):
             track = self._multitrack.tracks[i]
-            print(total_ticks)
-            print(np.shape(track.pianoroll))
             track.pianoroll = track.pianoroll[:total_ticks]
-            print(np.shape(track.pianoroll))
             self._multitrack.tracks[i] = track
-        print(self.get_length_seconds())
+
+    def _get_length_seconds(self, ticks):
+        seconds = 0
+        for i in range(ticks):
+            tempo = self._multitrack.tempo[i]
+            resolution = self._multitrack.beat_resolution
+            tick_time = 60/(tempo*resolution)
+            seconds = seconds + tick_time
+        return round(seconds, 1)
 
     def _get_ticks_from_seconds(self, duration):
-        return int((duration*self._multitrack.tempo[0]*self._multitrack.beat_resolution)/60)
-        '''
-        ticks = 0
-            for i in range(self._multitrack.get_maximal_length()):
-                tempo = self._multitrack.tempo[i]
-                resolution = self._multitrack.beat_resolution
-                ticks = ticks + (duration/60)*(tempo*resolution)
-            return int(ticks)
-        '''
+        for i in range(self._multitrack.get_maximal_length()):
+            seconds = self._get_length_seconds(i)
+            if int(seconds) == int(duration):
+                return i
