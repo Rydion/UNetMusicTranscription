@@ -68,7 +68,6 @@ class Preprocessor:
             # Read original files
             midi = Midi.from_file(os.path.join(self.src_dir, file_name + '.mid'))
             duration = midi.get_length_seconds()
-            print(duration)
 
             sample_rate, samples = AudioReader.read_wav(
                 os.path.join(self.src_dir, file),

@@ -15,36 +15,21 @@ class Midi:
         multitrack.trim_trailing_silence()
         multitrack.remove_empty_tracks()
         multitrack.pad_to_same()
-        if len(multitrack.tracks) > 10000:
-            multitrack.merge_tracks(
-                mode = 'max',
-                is_drum = False,
-                program = 0,
-                remove_merged = True
-            )
 
+        track_indices = [i for i in range(len(multitrack.tracks))]
+        multitrack.merge_tracks(
+            track_indices = track_indices,
+            mode = 'max',
+            is_drum = False,
+            program = 0,
+            remove_merged = True
+        )
+        
         return Midi(multitrack)
 
     def __init__(self, multitrack):
         self._multitrack = multitrack
         self._trim()
-
-    def get_length_seconds(self):
-        resolution = self._multitrack.beat_resolution
-        seconds = 0
-        for i in range(self._multitrack.get_maximal_length()):
-            tempo = self._multitrack.tempo[i]
-            seconds = seconds + 60/(tempo*resolution)
-        return seconds
-        '''
-        tempo = self._multitrack.tempo[0] # Supose constant tempo
-        total_ticks = self._multitrack.get_maximal_length()
-        resolution = self._multitrack.beat_resolution
-
-        print(['test', secs, (60*total_ticks)/(tempo*resolution)])
-
-        return (60*total_ticks)/(tempo*resolution)
-        '''
 
     def plot(self, x, plain = False):
         fig, ax = self._plot(x, 1, plain = plain)
@@ -74,6 +59,14 @@ class Midi:
 
         return img
 
+    def get_length_seconds(self):
+        seconds = 0
+        for i in range(self._multitrack.get_maximal_length()):
+            tempo = self._multitrack.tempo[i]
+            resolution = self._multitrack.beat_resolution
+            seconds = seconds + 60/(tempo*resolution)
+        return round(seconds, 2)
+
     def _plot(self, mult_x, mult_y, plain):
         default_figsize = plt.rcParams['figure.figsize']
         plt.rcParams['figure.figsize'] = [mult_x*default_figsize[0], default_figsize[1]]
@@ -91,16 +84,23 @@ class Midi:
         duration = self.get_length_seconds()
         duration = int(duration)
         total_ticks = self._get_ticks_from_seconds(duration)
-        for i, t in enumerate(self._multitrack.tracks):
-            self._multitrack.tracks[i] = t[:total_ticks]
+        print(self.get_length_seconds())
+        for i in range(len(self._multitrack.tracks)):
+            track = self._multitrack.tracks[i]
+            print(total_ticks)
+            print(np.shape(track.pianoroll))
+            track.pianoroll = track.pianoroll[:total_ticks]
+            print(np.shape(track.pianoroll))
+            self._multitrack.tracks[i] = track
+        print(self.get_length_seconds())
 
     def _get_ticks_from_seconds(self, duration):
-        s = set()
-        for i in self._multitrack.tempo:
-            s.add(i)
-        print(s)
-
-        tempo = self._multitrack.tempo[0] # Supose constant tempo
-        total_ticks = self._multitrack.get_maximal_length()
-        resolution = self._multitrack.beat_resolution
-        return int(duration*(tempo*resolution)//60)
+        return int((duration*self._multitrack.tempo[0]*self._multitrack.beat_resolution)/60)
+        '''
+        ticks = 0
+            for i in range(self._multitrack.get_maximal_length()):
+                tempo = self._multitrack.tempo[i]
+                resolution = self._multitrack.beat_resolution
+                ticks = ticks + (duration/60)*(tempo*resolution)
+            return int(ticks)
+        '''

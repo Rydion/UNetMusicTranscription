@@ -45,7 +45,7 @@ def sigmoid_xentropy(x, y):
     ce = tf.nn.weighted_cross_entropy_with_logits(
         targets = y,
         logits = x,
-        pos_weight = 50
+        pos_weight = 45
     )
     
     return tf.reduce_mean(ce)
