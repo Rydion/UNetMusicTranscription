@@ -1,5 +1,5 @@
 '''
-author: Adrian Hintze @Rydion
+author: Adrian Hintze
 '''
 
 import os
@@ -11,23 +11,21 @@ import matplotlib.pyplot as plt
 from PIL import Image
 from utils.AudioReader import AudioReader
 from utils.Stft import Stft
-from utils.CQT import CQT
+from utils.Cqt import Cqt
 from utils.Midi import Midi
 from utils.functions import grey_scale, binarize, get_chunk_generator
 
 plt.rcParams['figure.figsize'] = [4, 16]
-plt.rcParams['figure.dpi'] = 16
+plt.rcParams['figure.dpi'] = 32
 
 # TODO:
 #   support other extensions apart from wav
 #   make the size of the output/input pair images a parameter
 
 class Preprocessor:
-    IMAGE_FORMAT = '.png'
-    DOWNSAMPLE_RATE = 16384 #16384 #Hz
+    DOWNSAMPLE_RATE = 8192 #4096 8192 16384 Hz
     SFFT_WINDOW_LENGTH = 1024
     SFFT_STRIDE = SFFT_WINDOW_LENGTH//2
-    FILL_DIGITS = 4
     INPUT_SUFFIX = 'in'
     OUTPUT_SUFFIX = 'out'
 
@@ -43,11 +41,14 @@ class Preprocessor:
         true_len = num + remainder
         return true_len//dem
 
-    def __init__(self, src_dir, dst_dir):
+    def __init__(self, src_dir, dst_dir, img_format):
         self.src_dir = src_dir
         self.dst_dir = dst_dir
-        self.training_dir = os.path.join(self.dst_dir, 'training')
-        self.test_dir = os.path.join(self.dst_dir, 'test')
+        self.training_dst_dir = os.path.join(self.dst_dir, 'training')
+        self.test_dst_dir = os.path.join(self.dst_dir, 'test')
+        self.img_format = img_format
+
+        self._fill_digits = 4
 
     def preprocess(self, gen_input = True, gen_output = True, transformation = 'stft', duration_multiplier = 1, color = False):
         self._delete_dst_dir()
@@ -127,8 +128,8 @@ class Preprocessor:
 
     def _create_dst_dirs(self):
         os.makedirs(self.dst_dir)
-        os.makedirs(self.training_dir)
-        os.makedirs(self.test_dir)
+        os.makedirs(self.training_dst_dir)
+        os.makedirs(self.test_dst_dir)
 
     def _save_sliced(self, chunks, file_name, file_suffix = '', binary = False, color = True):
         fig, ax = plt.subplots(1)
@@ -157,7 +158,7 @@ class Preprocessor:
                 cmap = plt.cm.binary if binary else (None if color else  plt.cm.gray)
             )
 
-            dst_file = os.path.join(self.dst_dir, file_name + '_' + str(i + 1).zfill(Preprocessor.FILL_DIGITS) + '.' + file_suffix + Preprocessor.IMAGE_FORMAT)
+            dst_file = os.path.join(self.dst_dir, file_name + '_' + str(i + 1).zfill(self._fill_digits) + '.' + file_suffix + self.img_format)
             fig.savefig(dst_file, frameon = True, transparent = False)
 
             if binary:
@@ -200,9 +201,9 @@ class Preprocessor:
 
         for f in training_files:
             input_file, output_file = f
-            shutil.move(input_file, self.training_dir)
-            shutil.move(output_file, self.training_dir)
+            shutil.move(input_file, self.training_dst_dir)
+            shutil.move(output_file, self.training_dst_dir)
         for f in test_files:
             input_file, output_file = f
-            shutil.move(input_file, self.test_dir)
-            shutil.move(output_file, self.test_dir)
+            shutil.move(input_file, self.test_dst_dir)
+            shutil.move(output_file, self.test_dst_dir)

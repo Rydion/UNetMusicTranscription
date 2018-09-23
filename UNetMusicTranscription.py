@@ -1,58 +1,41 @@
 '''
-author: Adrian Hintze @Rydion
+author: Adrian Hintze
 '''
 
 import os
 import shutil
-import tensorflow as tf
+import configparser
 import numpy as np
+import tensorflow as tf
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
 from unet.Unet import UNetModel
 from utils.Preprocessor import Preprocessor
 
-COLOR = False
-DATASET = 'mirex' # mirex
-DURATION_MULTIPLIER = 8 # slices of 1/DURATION_MULTIPLIER seconds
-TRANSFORMATION = 'cqt' # cqt stft
-NUM_EPOCHS = 5
-BATCH_SIZE = 8
-
-DATA_SRC_DIR = os.path.join('./data/raw/', DATASET) 
-
-DATASET_DIR = './data/preprocessed/'
-FULL_DATASET = '{0}.{1}.{2}'.format(DATASET, TRANSFORMATION, DURATION_MULTIPLIER)
-FULL_DATASET_DIR = os.path.join(DATASET_DIR, FULL_DATASET)
-
-RESULTS_DIR = './results/'
-MODEL_NAME = '{0}-{1}-{2}-{3}-{4}-45'.format(DATASET, TRANSFORMATION, DURATION_MULTIPLIER, NUM_EPOCHS, BATCH_SIZE)
-FULL_RESULTS_DIR = os.path.join(RESULTS_DIR, MODEL_NAME)
-
-MODEL_DST_DIR = os.path.join(FULL_RESULTS_DIR, 'unet')
-TRAINING_PLOT_DST_DIR = os.path.join(FULL_RESULTS_DIR, 'training-prediction')
-TEST_PLOT_DST_DIR = os.path.join(FULL_RESULTS_DIR, 'test-prediction')
-
-IMAGE_FORMAT = '.png'
-DATA_SUFFIX = '.in'
-MASK_SUFFIX = '.out'
-
-TRAIN = True
-
 class Wrapper(object):
-    def __init__(self, sess, load = False, model_src_dir = None):
+    def __init__(
+        self,
+        sess,
+        dataset_src_dir,
+        image_format,
+        input_suffix,
+        output_suffix,
+        batch_size,
+        num_epochs
+    ):
         self.sess = sess
 
         self.training_dataset_size, self.test_dataset_size, self.training_dataset, self.test_dataset = self._get_dataset(
-            FULL_DATASET_DIR,
-            IMAGE_FORMAT,
-            DATA_SUFFIX,
-            MASK_SUFFIX,
-            bach_size = BATCH_SIZE,
-            num_epochs = NUM_EPOCHS
+            dataset_src_dir,
+            image_format,
+            input_suffix,
+            output_suffix,
+            bach_size = batch_size,
+            num_epochs = num_epochs
         )
 
-        self.handle = tf.placeholder(tf.string, shape = [], name = 'dataset-handle-placeholder')
+        self.handle = tf.placeholder(tf.string, shape = [])
         self.iterator = tf.data.Iterator.from_string_handle(self.handle, self.training_dataset.output_types, self.training_dataset.output_shapes)
         self.training_handle = sess.run(self.training_dataset.make_one_shot_iterator().string_handle())
         self.test_handle = sess.run(self.test_dataset.make_one_shot_iterator().string_handle())
@@ -65,12 +48,9 @@ class Wrapper(object):
             self.is_training
         )
 
-        if load:
-            self._load_model(model_src_dir)
-        else:
-            sess.run(tf.global_variables_initializer())
+        sess.run(tf.global_variables_initializer())
 
-    def train(self, model_dst_dir, plot_dest_dir):
+    def train(self, model_dst_dir, plot_dest_dir, color = False):
         i = 0
         epoch = 1
         epoch_cost = 0
@@ -87,7 +67,7 @@ class Wrapper(object):
                 # each epoch
                 if i == self.training_dataset_size:
                     self._save_model(model_dst_dir, global_step = epoch)
-                    self._plot(x, y, prediction, save = True, id = 'epoch-{0}'.format(epoch), dst_dir = plot_dest_dir)
+                    self._plot(x, y, prediction, color, save = True, id = 'epoch-{0}'.format(epoch), dst_dir = plot_dest_dir)
 
                     training_error = epoch_cost/i
                     test_error = self.test()
@@ -102,7 +82,7 @@ class Wrapper(object):
         finally:
             self._save_model(model_dst_dir)
 
-    def test(self, plot = False, plot_dest_dir = None):
+    def test(self, plot = False, plot_dest_dir = None, color = False):
         i = 0
         total_cost = 0
         try:
@@ -117,7 +97,7 @@ class Wrapper(object):
                 total_cost = total_cost + cost
 
                 if plot:
-                    self._plot(x, y, prediction, save = True, id = 'sample-{0}'.format(i), dst_dir = plot_dest_dir)
+                    self._plot(x, y, prediction, color, save = True, id = 'sample-{0}'.format(i), dst_dir = plot_dest_dir)
 
                 # one epoch
                 if i == self.test_dataset_size:
@@ -200,7 +180,7 @@ class Wrapper(object):
         saver = tf.train.Saver()
         saver.restore(self.sess, os.path.join(src_dir, 'model.ckpt'))
 
-    def _plot(self, x, y, prediction, save = False, id = 0, dst_dir = None):
+    def _plot(self, x, y, prediction, color, save = False, id = 0, dst_dir = None):
         x = x[0, ..., 0]
         y = y[0, ..., 0]
         prediction = prediction[0, ..., 0]
@@ -210,7 +190,7 @@ class Wrapper(object):
         mask1 = prediction > 0.99
 
         fig, ax = plt.subplots(1, 7, figsize = (7*4, 16), dpi = 32)
-        ax[0].imshow(x, vmin = 0, vmax = 1, aspect = 'auto', cmap = None if COLOR else plt.cm.gray)
+        ax[0].imshow(x, vmin = 0, vmax = 1, aspect = 'auto', cmap = None if color else plt.cm.gray)
         ax[1].imshow(y, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
         ax[2].imshow(prediction, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
         ax[3].imshow(mask07, aspect = 'auto', cmap = plt.cm.gray)
@@ -225,33 +205,115 @@ class Wrapper(object):
             plt.draw()
             plt.show()
 
-def init(dst_dir, model_dst_dir, training_plot_dst_dir, test_plot_dst_dir):
-    if not os.path.isdir(dst_dir):
+def init(
+    data_src_dir,
+    dataset_src_dir,
+    model_dst_dir,
+    training_plot_dst_dir,
+    test_plot_dst_dir,
+    transformation,
+    multiplier,
+    color,
+    img_format
+):
+    if not os.path.isdir(model_dst_dir):
         os.makedirs(model_dst_dir)
+    if not os.path.isdir(training_plot_dst_dir):
         os.makedirs(training_plot_dst_dir)
+    if not os.path.isdir(test_plot_dst_dir):
         os.makedirs(test_plot_dst_dir)
 
-    if not os.path.isdir(FULL_DATASET_DIR):
-        preprocessor = Preprocessor(DATA_SRC_DIR, FULL_DATASET_DIR)
+    if not os.path.isdir(dataset_src_dir):
+        preprocessor = Preprocessor(data_src_dir, dataset_src_dir, img_format)
         preprocessor.preprocess(
-            transformation = TRANSFORMATION,
-            duration_multiplier = DURATION_MULTIPLIER,
-            color = COLOR
+            transformation = transformation,
+            duration_multiplier = multiplier,
+            color = color
         )
 
     tf.reset_default_graph()
     return tf.Session()
 
-def main():
-    sess = init(FULL_RESULTS_DIR, MODEL_DST_DIR, TRAINING_PLOT_DST_DIR, TEST_PLOT_DST_DIR)
+def main(
+    data_src_dir,
+    dataset_src_dir,
+    model_dst_dir,
+    training_plot_dst_dir,
+    test_plot_dst_dir,
+    transformation,
+    multiplier,
+    color,
+    img_format,
+    input_suffix,
+    output_suffix,
+    batch_size,
+    num_epochs
+):
+    sess = init(
+        data_src_dir,
+        dataset_src_dir,
+        model_dst_dir,
+        training_plot_dst_dir,
+        test_plot_dst_dir,
+        transformation,
+        multiplier,
+        color,
+        img_format
+    )
 
-    if TRAIN:
-        wrapper = Wrapper(sess, load = False)
-        wrapper.train(MODEL_DST_DIR, TRAINING_PLOT_DST_DIR)
-    else:
-        wrapper = Wrapper(sess, load = False, model_src_dir = MODEL_DST_DIR)
-
-    wrapper.test(plot = True, plot_dest_dir = TEST_PLOT_DST_DIR)
+    wrapper = Wrapper(
+        sess,
+        dataset_src_dir,
+        img_format,
+        input_suffix,
+        output_suffix,
+        batch_size,
+        num_epochs
+    )
+    wrapper.train(model_dst_dir, training_plot_dst_dir, color)
+    wrapper.test(plot = True, plot_dest_dir = test_plot_dst_dir, color = color)
 
 if __name__ == '__main__':
-    main()
+    conf = configparser.ConfigParser()
+    conf.read('conf.ini')
+
+    global_conf = conf['global']
+    COLOR = global_conf.getboolean('color')
+    DATASET = global_conf['dataset']
+    DURATION_MULTIPLIER = int(global_conf['multiplier'])
+    TRANSFORMATION = global_conf['transformation']
+    IMG_FORMAT = global_conf['format']
+
+    training_conf = conf['training']
+    BATCH_SIZE = int(training_conf['batch'])
+    NUM_EPOCHS = int(training_conf['epochs'])
+
+    INPUT_SUFFIX = training_conf['input_suffix']
+    OUTPUT_SUFFIX = training_conf['output_suffix']
+
+    DATA_SRC_DIR = os.path.join('./data/raw/', DATASET) 
+
+    FULL_DATASET = '{0}.{1}.{2}'.format(DATASET, TRANSFORMATION, DURATION_MULTIPLIER)
+    DATASET_SRC_DIR = os.path.join('./data/preprocessed/', FULL_DATASET)
+
+    MODEL_NAME = '{0}-{1}-{2}-{3}-{4}-45'.format(DATASET, TRANSFORMATION, DURATION_MULTIPLIER, NUM_EPOCHS, BATCH_SIZE)
+    RESULTS_DST_DIR = os.path.join('./results/', MODEL_NAME)
+    MODEL_DST_DIR = os.path.join(RESULTS_DST_DIR, 'unet')
+    TRAINING_PLOT_DST_DIR = os.path.join(RESULTS_DST_DIR, 'training-prediction')
+    TEST_PLOT_DST_DIR = os.path.join(RESULTS_DST_DIR, 'test-prediction')
+
+    main(
+        DATA_SRC_DIR,       # Raw
+        DATASET_SRC_DIR,    # Processed
+        MODEL_DST_DIR,
+        TRAINING_PLOT_DST_DIR,
+        TEST_PLOT_DST_DIR,
+        TRANSFORMATION,
+        DURATION_MULTIPLIER,
+        COLOR,
+        IMG_FORMAT,
+        INPUT_SUFFIX,
+        OUTPUT_SUFFIX,
+        BATCH_SIZE,
+        NUM_EPOCHS
+    )

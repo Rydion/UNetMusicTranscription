@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 from utils.Spectrogram import Spectrogram
 
-class CQT(Spectrogram):
+class Cqt(Spectrogram):
     @classmethod
     def from_audio(cls, sample_rate, samples, stride = 512):
         values = librosa.core.cqt(

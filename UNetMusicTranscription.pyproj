@@ -43,7 +43,7 @@
     <Compile Include="utils\Preprocessor.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="utils\CQT.py" />
+    <Compile Include="utils\Cqt.py" />
     <Compile Include="utils\Stft.py" />
     <Compile Include="utils\functions.py" />
     <Compile Include="utils\Spectrogram.py">
@@ -53,42 +53,49 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include=".editorconfig" />
-    <Content Include=".gitattributes" />
     <Content Include=".gitignore" />
-    <Content Include="data\raw\MIREX\b.mid" />
-    <Content Include="data\raw\MIREX\b.wav" />
-    <Content Include="data\raw\MIREX\c.mid" />
-    <Content Include="data\raw\MIREX\c.wav" />
-    <Content Include="data\raw\MIREX\f.mid" />
-    <Content Include="data\raw\MIREX\f.wav" />
-    <Content Include="data\raw\MIREX\h.mid" />
-    <Content Include="data\raw\MIREX\h.wav" />
-    <Content Include="data\raw\MIREX\o.mid" />
-    <Content Include="data\raw\MIREX\o.wav" />
-    <Content Include="data\raw\MIREX\README" />
-    <Content Include="data\raw\Piano\Disklavier_01_G1_A2.mid" />
-    <Content Include="data\raw\Piano\Disklavier_01_G1_A2.wav" />
-    <Content Include="data\raw\Piano\Disklavier_02_G1_A3.mid" />
-    <Content Include="data\raw\Piano\Disklavier_02_G1_A3.wav" />
-    <Content Include="data\raw\Piano\Disklavier_03_G1_B1.mid" />
-    <Content Include="data\raw\Piano\Disklavier_03_G1_B1.wav" />
-    <Content Include="data\raw\Piano\Disklavier_04_G1_B3.mid" />
-    <Content Include="data\raw\Piano\Disklavier_04_G1_B3.wav" />
-    <Content Include="data\raw\Piano\Disklavier_05_G2_A3.mid" />
-    <Content Include="data\raw\Piano\Disklavier_05_G2_A3.wav" />
-    <Content Include="data\raw\Piano\Disklavier_06_G2_B2.mid" />
-    <Content Include="data\raw\Piano\Disklavier_06_G2_B2.wav" />
-    <Content Include="data\raw\Piano\Disklavier_07_G2_C3.mid" />
-    <Content Include="data\raw\Piano\Disklavier_07_G2_C3.wav" />
+    <Content Include="data\raw\mirex\basson.mid" />
+    <Content Include="data\raw\mirex\basson.wav" />
+    <Content Include="data\raw\mirex\clarinet.mid" />
+    <Content Include="data\raw\mirex\clarinet.wav" />
+    <Content Include="data\raw\mirex\flute.mid" />
+    <Content Include="data\raw\mirex\flute.wav" />
+    <Content Include="data\raw\mirex\horn.mid" />
+    <Content Include="data\raw\mirex\horn.wav" />
+    <Content Include="data\raw\mirex\oboe.mid" />
+    <Content Include="data\raw\mirex\oboe.wav" />
+    <Content Include="data\raw\smd\Bach_BWV849-01_001_20090916-SMD.mid" />
+    <Content Include="data\raw\smd\Bach_BWV849-01_001_20090916-SMD.wav" />
+    <Content Include="data\raw\smd\Bach_BWV849-02_001_20090916-SMD.mid" />
+    <Content Include="data\raw\smd\Bach_BWV849-02_001_20090916-SMD.wav" />
+    <Content Include="data\raw\smd\Bach_BWV871-01_002_20090916-SMD.mid" />
+    <Content Include="data\raw\smd\Bach_BWV871-01_002_20090916-SMD.wav" />
+    <Content Include="data\raw\smd\Bach_BWV871-02_002_20090916-SMD.mid" />
+    <Content Include="data\raw\smd\Bach_BWV871-02_002_20090916-SMD.wav" />
+    <Content Include="data\raw\smd\Bach_BWV875-01_002_20090916-SMD.mid" />
+    <Content Include="data\raw\smd\Bach_BWV875-01_002_20090916-SMD.wav" />
+    <Content Include="data\raw\smd\Bach_BWV875-02_002_20090916-SMD.mid" />
+    <Content Include="data\raw\smd\Bach_BWV875-02_002_20090916-SMD.wav" />
+    <Content Include="data\raw\smd\Bach_BWV888-01_008_20110315-SMD.mid" />
+    <Content Include="data\raw\smd\Bach_BWV888-01_008_20110315-SMD.wav" />
+    <Content Include="data\raw\smd\Bach_BWV888-02_008_20110315-SMD.mid" />
+    <Content Include="data\raw\smd\Bach_BWV888-02_008_20110315-SMD.wav" />
+    <Content Include="data\raw\smd\Bartok_SZ080-01_002_20110315-SMD.mid" />
+    <Content Include="data\raw\smd\Bartok_SZ080-01_002_20110315-SMD.wav" />
+    <Content Include="data\raw\smd\Bartok_SZ080-02_002_20110315-SMD.mid" />
+    <Content Include="data\raw\smd\Bartok_SZ080-02_002_20110315-SMD.wav" />
+    <Content Include="data\raw\smd\Bartok_SZ080-03_002_20110315-SMD.mid" />
+    <Content Include="data\raw\smd\Bartok_SZ080-03_002_20110315-SMD.wav" />
     <Content Include="LICENSE" />
     <Content Include="README.md" />
+    <Content Include="conf.ini" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="data\" />
     <Folder Include="data\preprocessed\" />
     <Folder Include="data\raw\" />
-    <Folder Include="data\raw\MIREX\" />
-    <Folder Include="data\raw\Piano\" />
+    <Folder Include="data\raw\mirex\" />
+    <Folder Include="data\raw\smd\" />
     <Folder Include="results\" />
     <Folder Include="unet\" />
     <Folder Include="utils\" />
