@@ -109,11 +109,13 @@ class Preprocessor:
                 chunks = get_chunk_generator(midi_img, slice_length)
                 self._save_sliced(chunks, file_name, file_suffix = Preprocessor.OUTPUT_SUFFIX, binary = True)
 
-            exit()
+            #exit()
 
             # Split into train/test by class
             self._split()
+
             #exit()
+
             # Output aesthetics
             print()
 

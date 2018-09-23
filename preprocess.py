@@ -7,9 +7,9 @@ import os
 from utils.Preprocessor import Preprocessor
 
 COLOR = False
-DURATION_MULTIPLIER = 1 # slices of 1/DURATION_MULTIPLIER seconds
+DURATION_MULTIPLIER = 4 # slices of 1/DURATION_MULTIPLIER seconds
 TRANSFORMATION = 'cqt' # stft cqt
-DATASET = 'test' # mirex piano-score piano-correct amaps-akpnbcht maps-akpnbcht
+DATASET = 'smd' # mirex smd piano-score piano-correct amaps-akpnbcht maps-akpnbcht
 DATA_SRC_PATH = os.path.join('./data/raw/', DATASET)
 FULL_DATASET = '{0}.{1}.{2}'.format(DATASET, TRANSFORMATION, DURATION_MULTIPLIER)
 DATASET_DST_PATH = os.path.join('./data/preprocessed/', FULL_DATASET)
