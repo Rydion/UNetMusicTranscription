@@ -211,10 +211,11 @@ def init(
     model_dst_dir,
     training_plot_dst_dir,
     test_plot_dst_dir,
+    img_format,
     transformation,
+    downsample_rate,
     multiplier,
-    color,
-    img_format
+    color
 ):
     if not os.path.isdir(model_dst_dir):
         os.makedirs(model_dst_dir)
@@ -224,7 +225,7 @@ def init(
         os.makedirs(test_plot_dst_dir)
 
     if not os.path.isdir(dataset_src_dir):
-        preprocessor = Preprocessor(data_src_dir, dataset_src_dir, img_format)
+        preprocessor = Preprocessor(data_src_dir, dataset_src_dir, img_format, downsample_rate)
         preprocessor.preprocess(
             transformation = transformation,
             duration_multiplier = multiplier,
@@ -240,10 +241,11 @@ def main(
     model_dst_dir,
     training_plot_dst_dir,
     test_plot_dst_dir,
+    img_format,
     transformation,
+    downsample_rate,
     multiplier,
     color,
-    img_format,
     input_suffix,
     output_suffix,
     batch_size,
@@ -255,10 +257,11 @@ def main(
         model_dst_dir,
         training_plot_dst_dir,
         test_plot_dst_dir,
+        img_format,
         transformation,
+        downsample_rate,
         multiplier,
-        color,
-        img_format
+        color
     )
 
     wrapper = Wrapper(
@@ -277,6 +280,7 @@ if __name__ == '__main__':
     conf = configparser.ConfigParser()
     conf.read('conf.ini')
 
+    # global conf
     global_conf = conf['global']
     COLOR = global_conf.getboolean('color')
     DATASET = global_conf['dataset']
@@ -284,16 +288,21 @@ if __name__ == '__main__':
     TRANSFORMATION = global_conf['transformation']
     IMG_FORMAT = global_conf['format']
 
+    # preprocessing conf
+    process_conf = conf['processing']
+    DOWNSAMPLE_RATE = int(process_conf['downsample'])
+
+    # training conf
     training_conf = conf['training']
     BATCH_SIZE = int(training_conf['batch'])
     NUM_EPOCHS = int(training_conf['epochs'])
-
     INPUT_SUFFIX = training_conf['input_suffix']
     OUTPUT_SUFFIX = training_conf['output_suffix']
 
+    # paths
     DATA_SRC_DIR = os.path.join('./data/raw/', DATASET) 
 
-    FULL_DATASET = '{0}.{1}.{2}'.format(DATASET, TRANSFORMATION, DURATION_MULTIPLIER)
+    FULL_DATASET = '{0}.{1}.{2}.{3}'.format(DATASET, TRANSFORMATION, DOWNSAMPLE_RATE, DURATION_MULTIPLIER)
     DATASET_SRC_DIR = os.path.join('./data/preprocessed/', FULL_DATASET)
 
     MODEL_NAME = '{0}-{1}-{2}-{3}-{4}-45'.format(DATASET, TRANSFORMATION, DURATION_MULTIPLIER, NUM_EPOCHS, BATCH_SIZE)
@@ -308,10 +317,11 @@ if __name__ == '__main__':
         MODEL_DST_DIR,
         TRAINING_PLOT_DST_DIR,
         TEST_PLOT_DST_DIR,
-        TRANSFORMATION,
-        DURATION_MULTIPLIER,
-        COLOR,
         IMG_FORMAT,
+        TRANSFORMATION,
+        DOWNSAMPLE_RATE,
+        DURATION_MULTIPLIER,
+        COLOR,   
         INPUT_SUFFIX,
         OUTPUT_SUFFIX,
         BATCH_SIZE,

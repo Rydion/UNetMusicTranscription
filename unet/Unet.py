@@ -20,11 +20,11 @@ def l2_loss(x, y):
     return tf.nn.l2_loss(tf.abs(x - y))
 
 def sigmoid_xentropy(x, y):
-    weights = tf.equal(y, 1.0)
+    #weights = tf.equal(y, 1.0)
 
-    note_pixels = tf.count_nonzero(weights, dtype = tf.int32)
-    total_pixels = tf.size(weights, out_type = tf.int32)
-    ratio = note_pixels/(total_pixels + note_pixels)
+    #note_pixels = tf.count_nonzero(weights, dtype = tf.int32)
+    #total_pixels = tf.size(weights, out_type = tf.int32)
+    #ratio = note_pixels/(total_pixels + note_pixels)
 
     #floatWeights = tf.cast(weights, tf.float32)
     #trueCase = tf.ones_like(floatWeights)*(total_pixels - note_pixels)

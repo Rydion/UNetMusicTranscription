@@ -23,7 +23,6 @@ plt.rcParams['figure.dpi'] = 32
 #   make the size of the output/input pair images a parameter
 
 class Preprocessor:
-    DOWNSAMPLE_RATE = 8192 #4096 8192 16384 Hz
     SFFT_WINDOW_LENGTH = 1024
     SFFT_STRIDE = SFFT_WINDOW_LENGTH//2
     INPUT_SUFFIX = 'in'
@@ -41,14 +40,16 @@ class Preprocessor:
         true_len = num + remainder
         return true_len//dem
 
-    def __init__(self, src_dir, dst_dir, img_format):
+    def __init__(self, src_dir, dst_dir, img_format, downsample_rate):
         self.src_dir = src_dir
         self.dst_dir = dst_dir
         self.training_dst_dir = os.path.join(self.dst_dir, 'training')
         self.test_dst_dir = os.path.join(self.dst_dir, 'test')
         self.img_format = img_format
+        self._downsample_rate = downsample_rate
 
         self._fill_digits = 4
+        self._cqt_stride = self._downsample_rate//32
 
     def preprocess(self, gen_input = True, gen_output = True, transformation = 'stft', duration_multiplier = 1, color = False):
         self._delete_dst_dir()
@@ -74,7 +75,7 @@ class Preprocessor:
                 os.path.join(self.src_dir, file),
                 as_mono = True,
                 downsample = True,
-                downsample_rate = Preprocessor.DOWNSAMPLE_RATE,
+                downsample_rate = self._downsample_rate,
                 duration = duration
             )
 
@@ -86,9 +87,10 @@ class Preprocessor:
                     stride = Preprocessor.SFFT_STRIDE
                 )
             elif transformation == 'cqt':
-                spectrogram = CQT.from_audio(
+                spectrogram = Cqt.from_audio(
                     sample_rate,
-                    samples
+                    samples,
+                    self._cqt_stride
                 )
             else:
                 raise ValueError('Unknown transformation: ' + transformation + '.')
