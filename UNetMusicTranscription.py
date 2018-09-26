@@ -305,7 +305,7 @@ if __name__ == '__main__':
     FULL_DATASET = '{0}.{1}.{2}.{3}'.format(DATASET, TRANSFORMATION, DOWNSAMPLE_RATE, DURATION_MULTIPLIER)
     DATASET_SRC_DIR = os.path.join('./data/preprocessed/', FULL_DATASET)
 
-    MODEL_NAME = '{0}-{1}-{2}-{3}-{4}-45'.format(DATASET, TRANSFORMATION, DURATION_MULTIPLIER, NUM_EPOCHS, BATCH_SIZE)
+    MODEL_NAME = '{0}.{1}.{2}.{3}.{4}.{5}.40'.format(DATASET, TRANSFORMATION, DOWNSAMPLE_RATE, DURATION_MULTIPLIER, NUM_EPOCHS, BATCH_SIZE)
     RESULTS_DST_DIR = os.path.join('./results/', MODEL_NAME)
     MODEL_DST_DIR = os.path.join(RESULTS_DST_DIR, 'unet')
     TRAINING_PLOT_DST_DIR = os.path.join(RESULTS_DST_DIR, 'training-prediction')
