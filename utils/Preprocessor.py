@@ -90,7 +90,10 @@ class Preprocessor:
                 spectrogram = Cqt.from_audio(
                     sample_rate,
                     samples,
-                    self._cqt_stride
+                    self._cqt_stride,
+                    starting_note = 'C0',
+                    num_octaves = 8,
+                    bins_per_octave = 36
                 )
             else:
                 raise ValueError('Unknown transformation: ' + transformation + '.')

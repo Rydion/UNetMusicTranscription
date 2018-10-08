@@ -1,5 +1,5 @@
 '''
-author: Adrian Hintze @Rydion
+author: Adrian Hintze
 '''
 
 import numpy as np
