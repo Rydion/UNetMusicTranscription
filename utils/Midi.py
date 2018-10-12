@@ -15,7 +15,10 @@ class Midi:
     @staticmethod
     def from_file(file_path):
         multitrack = pyano.parse(file_path)
-        multitrack.assign_constant(127)
+
+        multitrack.binarize()
+        multitrack.assign_constant(1)
+
         multitrack.trim_trailing_silence()
         multitrack.remove_empty_tracks()
         multitrack.pad_to_same()
@@ -34,6 +37,56 @@ class Midi:
     def __init__(self, multitrack):
         self._multitrack = multitrack
         self._trim()
+
+        sampled_pianoroll = self._sample(self._multitrack.tracks[0].pianoroll)
+        sampled_pianoroll = sampled_pianoroll.transpose()
+        print(np.shape(sampled_pianoroll))
+        print([np.amin(sampled_pianoroll), np.amax(sampled_pianoroll)])
+
+        pianoroll = self._multitrack.tracks[0].pianoroll#[:, 12:108]
+        pianoroll = pianoroll.transpose()
+        print(np.shape(pianoroll))
+        print([np.amin(pianoroll), np.amax(pianoroll)])
+
+        fig, ax = plt.subplots(1, 2, figsize = None, dpi = None)
+        ax[0].imshow(pianoroll, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
+        ax[1].imshow(sampled_pianoroll, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
+        plt.draw()
+        plt.show()
+
+    def _sample(self, pianoroll, sps = 32):
+        ticks = self._multitrack.get_maximal_length()
+        length_seconds = self._get_length_seconds(ticks)
+        time_step = 1/sps
+        samples = int(length_seconds//time_step) + 1
+
+        notes = 128
+        sampled_pianoroll = np.zeros([samples, notes])
+
+        def aux(ticks):
+            time = 0
+            for i in range(ticks):
+                tempo = self._multitrack.tempo[i]
+                resolution = self._multitrack.beat_resolution
+                tick_time = 60/(tempo*resolution)
+                time = time + tick_time
+            return time
+
+        i = 0
+        time = 0
+        current_tick = 0
+        current_midi_time = aux(current_tick)
+        while i < samples:
+            while time > current_midi_time:
+                if current_tick == np.shape(pianoroll)[0] - 1:
+                    break
+                current_tick = current_tick + 1
+                current_midi_time = aux(current_tick)
+            sampled_pianoroll[i] = pianoroll[current_tick]
+            time = time + time_step
+            i = i + 1
+
+        return sampled_pianoroll
 
     def plot(self, x, plain = False):
         fig, ax = self._plot(x, 1, plain = plain)

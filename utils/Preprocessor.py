@@ -15,7 +15,7 @@ from utils.Cqt import Cqt
 from utils.Midi import Midi
 from utils.functions import grey_scale, binarize, get_chunk_generator
 
-plt.rcParams['figure.figsize'] = [4, 16]
+plt.rcParams['figure.figsize'] = [4, 18]
 plt.rcParams['figure.dpi'] = 32
 
 # TODO:
