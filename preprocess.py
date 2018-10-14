@@ -11,12 +11,21 @@ def main(
     data_src_path,
     dataset_dst_path,
     img_format,
+    input_suffix,
+    output_suffix,
     transformation,
     downsample_rate,
     duration_multiplier,
     color
 ):
-    preprocessor = Preprocessor(data_src_path, dataset_dst_path, img_format, downsample_rate)
+    preprocessor = Preprocessor(
+        data_src_path,
+        dataset_dst_path,
+        img_format,
+        input_suffix,
+        output_suffix,
+        downsample_rate
+    )
     preprocessor.preprocess(
         gen_input = True,
         gen_output = True,
@@ -38,6 +47,8 @@ if __name__ == '__main__':
     DURATION_MULTIPLIER = int(global_conf['multiplier'])
     TRANSFORMATION = global_conf['transformation']
     IMG_FORMAT = global_conf['format']
+    INPUT_SUFFIX = global_conf['input_suffix']
+    OUTPUT_SUFFIX = global_conf['output_suffix']
 
     # preprocessing conf
     process_conf = conf['processing']
@@ -55,6 +66,8 @@ if __name__ == '__main__':
         DATA_SRC_PATH,
         DATASET_DST_PATH,
         IMG_FORMAT,
+        INPUT_SUFFIX,
+        OUTPUT_SUFFIX,
         TRANSFORMATION,
         DOWNSAMPLE_RATE,
         DURATION_MULTIPLIER,

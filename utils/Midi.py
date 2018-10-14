@@ -38,55 +38,6 @@ class Midi:
         self._multitrack = multitrack
         self._trim()
 
-        sampled_pianoroll = self._sample(self._multitrack.tracks[0].pianoroll)
-        sampled_pianoroll = sampled_pianoroll.transpose()
-        print(np.shape(sampled_pianoroll))
-        print([np.amin(sampled_pianoroll), np.amax(sampled_pianoroll)])
-
-        pianoroll = self._multitrack.tracks[0].pianoroll#[:, 12:108]
-        pianoroll = pianoroll.transpose()
-        print(np.shape(pianoroll))
-        print([np.amin(pianoroll), np.amax(pianoroll)])
-
-        fig, ax = plt.subplots(1, 2, figsize = None, dpi = None)
-        ax[0].imshow(pianoroll, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
-        ax[1].imshow(sampled_pianoroll, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
-        plt.draw()
-        plt.show()
-
-    def _sample(self, pianoroll, sps = 32):
-        ticks = self._multitrack.get_maximal_length()
-        length_seconds = self._get_length_seconds(ticks)
-        time_step = 1/sps
-        samples = int(length_seconds//time_step) + 1
-
-        notes = 128
-        sampled_pianoroll = np.zeros([samples, notes])
-
-        def aux(ticks):
-            time = 0
-            for i in range(ticks):
-                tempo = self._multitrack.tempo[i]
-                resolution = self._multitrack.beat_resolution
-                tick_time = 60/(tempo*resolution)
-                time = time + tick_time
-            return time
-
-        i = 0
-        time = 0
-        current_tick = 0
-        current_midi_time = aux(current_tick)
-        while i < samples:
-            while time > current_midi_time:
-                if current_tick == np.shape(pianoroll)[0] - 1:
-                    break
-                current_tick = current_tick + 1
-                current_midi_time = aux(current_tick)
-            sampled_pianoroll[i] = pianoroll[current_tick]
-            time = time + time_step
-            i = i + 1
-
-        return sampled_pianoroll
 
     def plot(self, x, plain = False):
         fig, ax = self._plot(x, 1, plain = plain)
@@ -118,7 +69,32 @@ class Midi:
 
     def get_length_seconds(self):
         # Length should include everything, including trailing silence
-        return self._get_length_seconds(self._multitrack.get_maximal_length())
+        return round(self._get_seconds_from_ticks(self._multitrack.get_maximal_length()))
+
+    def get_pianoroll(self, samples_per_second, note_min = 0, num_notes = 128):
+        pianoroll = self._multitrack.tracks[0].pianoroll[:, note_min:note_min + num_notes]
+        sampled_pianoroll = self._sample_pianoroll(pianoroll, samples_per_second = samples_per_second)
+        return sampled_pianoroll.transpose()
+
+        '''
+            pianoroll = self._pianoroll.transpose()
+            sampled_pianoroll = self._sampled_pianoroll.transpose()
+
+            fig, ax = plt.subplots(1, 2, figsize = None, dpi = None)
+            ax[0].imshow(pianoroll, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
+            ax[1].imshow(sampled_pianoroll, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
+            plt.draw()
+            plt.show()
+        '''
+
+    def _trim(self):
+        duration = self.get_length_seconds()
+        duration = int(duration)
+        total_ticks = self._get_ticks_from_seconds(duration)
+        for i in range(len(self._multitrack.tracks)):
+            track = self._multitrack.tracks[i]
+            track.pianoroll = track.pianoroll[:total_ticks]
+            self._multitrack.tracks[i] = track
 
     def _plot(self, mult_x, mult_y, plain):
         default_figsize = plt.rcParams['figure.figsize']
@@ -133,26 +109,41 @@ class Midi:
 
         return fig, ax
 
-    def _trim(self):
-        duration = self.get_length_seconds()
-        duration = int(duration)
-        total_ticks = self._get_ticks_from_seconds(duration)
-        for i in range(len(self._multitrack.tracks)):
-            track = self._multitrack.tracks[i]
-            track.pianoroll = track.pianoroll[:total_ticks]
-            self._multitrack.tracks[i] = track
+    def _sample_pianoroll(self, pianoroll, samples_per_second = 32):
+        length_seconds = self.get_length_seconds()
+        time_step = 1/samples_per_second
+        samples = int(length_seconds//time_step) + 1
 
-    def _get_length_seconds(self, ticks):
-        seconds = 0
+        notes = np.shape(pianoroll)[1]
+        sampled_pianoroll = np.zeros([samples, notes])
+
+        i = 0
+        time = 0
+        current_tick = 0
+        current_midi_time = self._get_seconds_from_ticks(current_tick)
+        while i < samples:
+            while time > current_midi_time:
+                if current_tick == np.shape(pianoroll)[0] - 1:
+                    break
+                current_tick = current_tick + 1
+                current_midi_time = self._get_seconds_from_ticks(current_tick)
+            sampled_pianoroll[i] = pianoroll[current_tick]
+            time = time + time_step
+            i = i + 1
+
+        return sampled_pianoroll
+
+    def _get_seconds_from_ticks(self, ticks):
+        time = 0
         for i in range(ticks):
             tempo = self._multitrack.tempo[i]
             resolution = self._multitrack.beat_resolution
             tick_time = 60/(tempo*resolution)
-            seconds = seconds + tick_time
-        return round(seconds, 1)
+            time = time + tick_time
+        return time
 
     def _get_ticks_from_seconds(self, duration):
         for i in range(self._multitrack.get_maximal_length()):
-            seconds = self._get_length_seconds(i)
+            seconds = self._get_seconds_from_ticks(i)
             if int(seconds) == int(duration):
                 return i

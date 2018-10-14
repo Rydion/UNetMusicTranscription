@@ -11,7 +11,7 @@ from utils.Spectrogram import Spectrogram
 
 class Cqt(Spectrogram):
     @classmethod
-    def from_audio(cls, sample_rate, samples, stride, starting_note = 'C0', num_octaves = 8, bins_per_octave = 36):
+    def from_audio(cls, sample_rate, samples, stride = 512, starting_note = 'C0', num_octaves = 8, bins_per_octave = 36):
         values = librosa.core.cqt(
             samples,
             sr = sample_rate,
@@ -24,8 +24,7 @@ class Cqt(Spectrogram):
         #std = np.std(values, axis = 1, keepdims = True)
         #values = np.divide(np.subtract(values, mean), std)
         values = librosa.amplitude_to_db(np.abs(values), ref = np.max)
-        #values = CQT.normalize_values(values)
-        print(np.shape(values))
+        values = Cqt.normalize_values(values)
         return Cqt(values, sample_rate)
 
     def __init__(self, *args):

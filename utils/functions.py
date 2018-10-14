@@ -21,3 +21,14 @@ def binarize(grey_img, threshold):
 def get_chunk_generator(matrix, chunk_length):
     for i in range(0, np.shape(matrix)[1], chunk_length):
         yield matrix[:, i:i + chunk_length]
+
+def expand_array(arr, size, pixel_mult, dim):
+    result = np.zeros(size)
+    orig_size = np.shape(arr)
+    for i in range(orig_size[dim]):
+        for j in range(pixel_mult):
+            if dim == 0:
+                result[i*pixel_mult + j, :] = arr[i, :]
+            else:
+                result[:, i*pixel_mult + j] = arr[:, i]
+    return result

@@ -13,21 +13,16 @@ from utils.AudioReader import AudioReader
 from utils.Stft import Stft
 from utils.Cqt import Cqt
 from utils.Midi import Midi
-from utils.functions import grey_scale, binarize, get_chunk_generator
+from utils.functions import grey_scale, binarize, get_chunk_generator, expand_array
 
-plt.rcParams['figure.figsize'] = [4, 18]
-plt.rcParams['figure.dpi'] = 32
+#plt.rcParams['figure.figsize'] = [4, 18]
+#plt.rcParams['figure.dpi'] = 32
 
 # TODO:
 #   support other extensions apart from wav
 #   make the size of the output/input pair images a parameter
 
 class Preprocessor:
-    SFFT_WINDOW_LENGTH = 1024
-    SFFT_STRIDE = SFFT_WINDOW_LENGTH//2
-    INPUT_SUFFIX = 'in'
-    OUTPUT_SUFFIX = 'out'
-
     @staticmethod
     def calc_rounded_slice_length(num, dem):
         """
@@ -40,7 +35,7 @@ class Preprocessor:
         true_len = num + remainder
         return true_len//dem
 
-    def __init__(self, src_dir, dst_dir, img_format, downsample_rate):
+    def __init__(self, src_dir, dst_dir, img_format, input_suffix, output_suffix, downsample_rate):
         self.src_dir = src_dir
         self.dst_dir = dst_dir
         self.training_dst_dir = os.path.join(self.dst_dir, 'training')
@@ -49,7 +44,12 @@ class Preprocessor:
         self._downsample_rate = downsample_rate
 
         self._fill_digits = 4
-        self._cqt_stride = self._downsample_rate//32
+        self._samples_per_second = 32
+        self._cqt_stride = self._downsample_rate//self._samples_per_second
+        self._stft_window_length = 1024
+        self._stft_stride = self._stft_window_length//2
+        self._input_suffix = input_suffix
+        self._output_suffix = output_suffix
 
     def preprocess(self, gen_input = True, gen_output = True, transformation = 'stft', duration_multiplier = 1, color = False):
         self._delete_dst_dir()
@@ -83,14 +83,14 @@ class Preprocessor:
                 spectrogram = Stft.from_audio(
                     sample_rate,
                     samples,
-                    window_length = Preprocessor.SFFT_WINDOW_LENGTH,
-                    stride = Preprocessor.SFFT_STRIDE
+                    window_length = self._stft_window_length,
+                    stride = self._stft_stride
                 )
             elif transformation == 'cqt':
                 spectrogram = Cqt.from_audio(
                     sample_rate,
                     samples,
-                    self._cqt_stride,
+                    stride = self._cqt_stride,
                     starting_note = 'C0',
                     num_octaves = 8,
                     bins_per_octave = 36
@@ -98,29 +98,30 @@ class Preprocessor:
             else:
                 raise ValueError('Unknown transformation: ' + transformation + '.')
 
+            spectrogram_img = spectrogram.values
+
+            num_notes = 96
+            midi_img = midi.get_pianoroll(32, note_min = 12, num_notes = num_notes) # 8 octaves starting at C0
+            samples = np.shape(midi_img)[1]
+            pixels_per_note = np.shape(spectrogram_img)[0]//num_notes
+            midi_img = expand_array(midi_img, (np.shape(spectrogram_img)[0], samples), pixels_per_note, 0)
+
             duration = int(duration)
-            spectrogram_img = spectrogram.get_img(duration, 84, color = color)
-            midi_img = midi.get_img(duration, plain = True)
-            # Same for both images
             subdivisions = duration*duration_multiplier
-            slice_length = Preprocessor.calc_rounded_slice_length(np.shape(spectrogram_img)[1], subdivisions)
+            slice_length = np.shape(spectrogram_img)[1]//subdivisions
 
             if gen_input:
-                spectrogram.save(os.path.join(self.dst_dir, file_name + '.spectrogram.png'), duration, 84, color = color)
+                #spectrogram.save(os.path.join(self.dst_dir, file_name + '.spectrogram.png'), duration, 84, color = color)
                 chunks = get_chunk_generator(spectrogram_img, slice_length)
-                self._save_sliced(chunks, file_name, file_suffix = Preprocessor.INPUT_SUFFIX, binary = False)
+                self._save_sliced(chunks, file_name, file_suffix = self._input_suffix, binary = False)
 
             if gen_output:
-                midi.save(os.path.join(self.dst_dir, file_name + '.midi.png'), duration, plain = False)
+                #midi.save(os.path.join(self.dst_dir, file_name + '.midi.png'), duration, plain = False)
                 chunks = get_chunk_generator(midi_img, slice_length)
-                self._save_sliced(chunks, file_name, file_suffix = Preprocessor.OUTPUT_SUFFIX, binary = True)
-
-            #exit()
+                self._save_sliced(chunks, file_name, file_suffix = self._output_suffix, binary = True)
 
             # Split into train/test by class
             self._split()
-
-            #exit()
 
             # Output aesthetics
             print()
@@ -136,12 +137,9 @@ class Preprocessor:
         os.makedirs(self.training_dst_dir)
         os.makedirs(self.test_dst_dir)
 
-    def _save_sliced(self, chunks, file_name, file_suffix = '', binary = False, color = True):
-        fig, ax = plt.subplots(1)
-        fig.subplots_adjust(left = 0, right = 1, bottom = 0, top = 1)
-
-        start = time.clock()
+    def _save_sliced(self, chunks, file_name, file_suffix = '', binary = False):
         slice_length = 0
+        start = time.clock()
         for i, c in enumerate(chunks):
             # Don't save the last slice if it is smaller than the rest
             if np.shape(c)[1] < slice_length:
@@ -149,34 +147,16 @@ class Preprocessor:
 
             slice_length = np.shape(c)[1]
 
-            if binary:
-                c = grey_scale(c)
-                c = binarize(c, 200)
+            final_length = 64
+            c = expand_array(c, (np.shape(c)[0], final_length), final_length//np.shape(c)[1], 1)
 
-            ax.clear()
-            ax.axis('off')
-            ax.imshow(
-                c,
-                aspect = 'auto',
-                vmin = 0,
-                vmax = 255 if binary else 1,
-                cmap = plt.cm.binary if binary else (None if color else  plt.cm.gray)
-            )
+            c = (c*255).astype(np.uint8)
+            img = Image.fromarray(c, 'L').rotate(180)
 
-            dst_file = os.path.join(self.dst_dir, file_name + '_' + str(i + 1).zfill(self._fill_digits) + '.' + file_suffix + self.img_format)
-            fig.savefig(dst_file, frameon = True, transparent = False)
-
-            if binary:
-                Image.open(dst_file).convert('1').save(dst_file)
-            else:
-                if color:
-                    Image.open(dst_file).save(dst_file)
-                else:
-                    Image.open(dst_file).convert('L').save(dst_file)
+            dst_file = os.path.join(self.dst_dir, file_name + '_' + str(i + 1).zfill(self._fill_digits) + file_suffix + self.img_format)
+            img.save(dst_file)
         end = time.clock()
         print('Saved all slices in %.2f seconds.' % (end - start))
-
-        plt.close(fig)
 
     def _split(self):
         files = []
@@ -185,12 +165,12 @@ class Preprocessor:
                 continue
 
             file_name, file_extension = os.path.splitext(file)
-            if not file_name.endswith(Preprocessor.INPUT_SUFFIX):
+            if not file_name.endswith(self._input_suffix):
                 continue
 
             input_file_name = file_name
             input_file = file
-            output_file_name = os.path.splitext(file_name)[0] + '.' + Preprocessor.OUTPUT_SUFFIX
+            output_file_name = os.path.splitext(file_name)[0] + self._output_suffix
             output_file = output_file_name + file_extension
             if os.path.isfile(os.path.join(self.dst_dir, output_file)):
                 files.append((os.path.join(self.dst_dir, input_file), os.path.join(self.dst_dir, output_file)))

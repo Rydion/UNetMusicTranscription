@@ -26,12 +26,12 @@ class Wrapper(object):
     ):
         self.sess = sess
 
-        self.training_dataset_size, self.test_dataset_size, self.training_dataset, self.test_dataset = self._get_dataset(
+        self.training_dataset_size, self.test_dataset_size, self.training_dataset, self.test_dataset = self._get_datasets(
             dataset_src_dir,
             image_format,
             input_suffix,
             output_suffix,
-            bach_size = batch_size,
+            batch_size = batch_size,
             num_epochs = num_epochs
         )
 
@@ -108,68 +108,49 @@ class Wrapper(object):
         finally:
             return total_cost/i
 
-    def _get_dataset(self, src_dir, format, input_suffix, output_suffix, bach_size = 1, num_epochs = None):
-        def parse_files(input_file, output_file):
-            input_img_string = tf.read_file(input_file)
-            output_img_string = tf.read_file(output_file)
+    def _get_datasets(self, src_dir, format, input_suffix, output_suffix, batch_size = 1, num_epochs = None):
+        def get_dataset(src_dir, format, input_suffix, bach_size, num_epochs = None):
+            def parse_files(input_file, output_file):
+                def parse_file(file, channels):
+                    img_string = tf.read_file(file)
+                    img = tf.image.decode_png(img_string, channels = channels, dtype = tf.uint8)
+                    img = tf.cast(img, tf.float32)/255
+                    return img
 
-            input_img = tf.image.decode_png(input_img_string, channels = 1, dtype = tf.uint8)
-            output_img = tf.image.decode_png(output_img_string, channels = 1, dtype = tf.uint8)
+                channels = 1
+                return parse_file(input_file, channels), parse_file(output_file, channels)
 
-            input_img = tf.cast(input_img, tf.float32)/255
-            output_img = tf.cast(output_img, tf.float32)/255
+            def get_input_output_files(src_dir, format, input_suffix):
+                input_files = []
+                output_files = []
+                for file in os.listdir(src_dir):
+                    file_name, file_extension = os.path.splitext(file)
+                    if file_extension != format:
+                        continue
+                    if not file_name.endswith(input_suffix):
+                        continue
 
-            return input_img, output_img
+                    input_file_name = file_name
+                    input_file = file
+                    output_file_name = os.path.splitext(file_name)[0] + output_suffix
+                    output_file = output_file_name + file_extension
+                    if os.path.isfile(os.path.join(src_dir, output_file)):
+                        input_files.append(os.path.join(src_dir, input_file))
+                        output_files.append(os.path.join(src_dir, output_file))
+                return input_files, output_files
 
-        training_input_files = []
-        training_output_files = []
-        training_dir = os.path.join(src_dir, 'training')
-        for file in os.listdir(training_dir):
-            file_name, file_extension = os.path.splitext(file)
-            if file_extension != format:
-                continue
-            if not file_name.endswith(input_suffix):
-                continue
+            input_files, output_files = get_input_output_files(src_dir, format, input_suffix)
+            dataset = tf.data.Dataset \
+                      .from_tensor_slices((input_files, output_files)) \
+                      .map(parse_files) \
+                      .batch(bach_size) \
+                      .shuffle(20) \
+                      .repeat(num_epochs)
 
-            input_file_name = file_name
-            input_file = file
-            output_file_name = os.path.splitext(file_name)[0] + output_suffix
-            output_file = output_file_name + file_extension
-            if os.path.isfile(os.path.join(training_dir, output_file)):
-                training_input_files.append(os.path.join(training_dir, input_file))
-                training_output_files.append(os.path.join(training_dir, output_file))
+            return len(input_files), dataset
 
-        test_input_files = []
-        test_output_files = []
-        test_dir = os.path.join(src_dir, 'test')
-        for file in os.listdir(test_dir):
-            file_name, file_extension = os.path.splitext(file)
-            if file_extension != format:
-                continue
-            if not file_name.endswith(input_suffix):
-                continue
-
-            input_file_name = file_name
-            input_file = file
-            output_file_name = os.path.splitext(file_name)[0] + output_suffix
-            output_file = output_file_name + file_extension
-            if os.path.isfile(os.path.join(test_dir, output_file)):
-                test_input_files.append(os.path.join(test_dir, input_file))
-                test_output_files.append(os.path.join(test_dir, output_file))
-
-        training_dataset_size = len(training_input_files)
-        test_dataset_size = len(test_input_files)
-
-        training_dataset = tf.data.Dataset \
-                           .from_tensor_slices((training_input_files, training_output_files)) \
-                           .map(parse_files)
-        test_dataset = tf.data.Dataset \
-                       .from_tensor_slices((test_input_files, test_output_files)) \
-                       .map(parse_files)
-
-        training_dataset = training_dataset.batch(bach_size).shuffle(20).repeat(num_epochs)
-        test_dataset = test_dataset.batch(1).shuffle(20).repeat()
-
+        training_dataset_size, training_dataset = get_dataset(os.path.join(src_dir, 'training'), format, input_suffix, batch_size, num_epochs = num_epochs)
+        test_dataset_size, test_dataset = get_dataset(os.path.join(src_dir, 'test'), format, input_suffix, batch_size)
         return training_dataset_size, test_dataset_size, training_dataset, test_dataset
 
     def _save_model(self, dst_dir, global_step = None):
@@ -287,6 +268,8 @@ if __name__ == '__main__':
     DURATION_MULTIPLIER = int(global_conf['multiplier'])
     TRANSFORMATION = global_conf['transformation']
     IMG_FORMAT = global_conf['format']
+    INPUT_SUFFIX = global_conf['input_suffix']
+    OUTPUT_SUFFIX = global_conf['output_suffix']
 
     # preprocessing conf
     process_conf = conf['processing']
@@ -296,8 +279,6 @@ if __name__ == '__main__':
     training_conf = conf['training']
     BATCH_SIZE = int(training_conf['batch'])
     NUM_EPOCHS = int(training_conf['epochs'])
-    INPUT_SUFFIX = training_conf['input_suffix']
-    OUTPUT_SUFFIX = training_conf['output_suffix']
 
     # paths
     DATA_SRC_DIR = os.path.join('./data/raw/', DATASET) 
