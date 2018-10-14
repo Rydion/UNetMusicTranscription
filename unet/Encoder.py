@@ -35,7 +35,7 @@ class Encoder(object):
     def __init__(self, input_tensor, is_training, reuse):
         net = input_tensor
 
-        kernel_size = (4, 4)
+        kernel_size = (5, 5)
         stride = (1, 1)
         with tf.variable_scope('encoder'):
             with tf.variable_scope('layer-1'):

@@ -193,6 +193,8 @@ def init(
     training_plot_dst_dir,
     test_plot_dst_dir,
     img_format,
+    input_suffix,
+    output_suffix,
     transformation,
     downsample_rate,
     multiplier,
@@ -206,7 +208,14 @@ def init(
         os.makedirs(test_plot_dst_dir)
 
     if not os.path.isdir(dataset_src_dir):
-        preprocessor = Preprocessor(data_src_dir, dataset_src_dir, img_format, downsample_rate)
+        preprocessor = Preprocessor(
+            data_src_dir,
+            dataset_src_dir,
+            img_format,
+            input_suffix,
+            output_suffix,
+            downsample_rate
+        )
         preprocessor.preprocess(
             transformation = transformation,
             duration_multiplier = multiplier,
@@ -239,6 +248,8 @@ def main(
         training_plot_dst_dir,
         test_plot_dst_dir,
         img_format,
+        input_suffix,
+        output_suffix,
         transformation,
         downsample_rate,
         multiplier,
