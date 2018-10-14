@@ -93,7 +93,7 @@ class Wrapper(object):
                     feed_dict = { self.model.is_training: False, self.model.input: x, self.handle: self.test_handle }
                 )
 
-                i = i + 1
+                i = i + np.shape(x)[0]
                 total_cost = total_cost + cost
 
                 if plot:
@@ -150,7 +150,7 @@ class Wrapper(object):
             return len(input_files), dataset
 
         training_dataset_size, training_dataset = get_dataset(os.path.join(src_dir, 'training'), format, input_suffix, batch_size, num_epochs = num_epochs)
-        test_dataset_size, test_dataset = get_dataset(os.path.join(src_dir, 'test'), format, input_suffix, batch_size)
+        test_dataset_size, test_dataset = get_dataset(os.path.join(src_dir, 'test'), format, input_suffix, 1)
         return training_dataset_size, test_dataset_size, training_dataset, test_dataset
 
     def _save_model(self, dst_dir, global_step = None):
@@ -170,7 +170,7 @@ class Wrapper(object):
         mask09 = prediction > 0.9
         mask1 = prediction > 0.99
 
-        fig, ax = plt.subplots(1, 7, figsize = (7*4, 16), dpi = 32)
+        fig, ax = plt.subplots(1, 7)
         ax[0].imshow(x, vmin = 0, vmax = 1, aspect = 'auto', cmap = None if color else plt.cm.gray)
         ax[1].imshow(y, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
         ax[2].imshow(prediction, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)

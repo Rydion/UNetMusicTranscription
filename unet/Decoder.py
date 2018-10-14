@@ -38,35 +38,35 @@ class Decoder(object):
     def __init__(self, input_tensor, encoder, is_training, reuse):
         net = input_tensor
 
-        kernel_size = (5, 5)
-        stride = (1, 1)
+        kernel_size = (3, 7)
+        stride = (1, 2)
         with tf.variable_scope('decoder'):
             with tf.variable_scope('layer-1'):
                 net = relu(net)
-                net = deconv(net, filters = 256, kernel_size = kernel_size, stride = stride)
+                net = deconv(net, filters = 144, kernel_size = kernel_size, stride = stride)
                 net = batch_norm(net, is_training = is_training, reuse = reuse)
                 net = dropout(net, 0.5)
 
             with tf.variable_scope('layer-2'):
                 net = relu(concat(net, encoder.l5))
-                net = deconv(net, filters = 128, kernel_size = kernel_size, stride = stride)
+                net = deconv(net, filters = 72, kernel_size = kernel_size, stride = stride)
                 net = batch_norm(net, is_training = is_training, reuse = reuse)
                 net = dropout(net, 0.5)
 
             with tf.variable_scope('layer-3'):
                 net = relu(concat(net, encoder.l4))
-                net = deconv(net, filters=64, kernel_size = kernel_size, stride = stride)
+                net = deconv(net, filters = 36, kernel_size = kernel_size, stride = stride)
                 net = batch_norm(net, is_training = is_training, reuse = reuse)
                 net = dropout(net, 0.5)
 
             with tf.variable_scope('layer-4'):
                 net = relu(concat(net, encoder.l3))
-                net = deconv(net, filters = 32, kernel_size = kernel_size, stride = stride)
+                net = deconv(net, filters = 18, kernel_size = kernel_size, stride = stride)
                 net = batch_norm(net, is_training = is_training, reuse = reuse)
 
             with tf.variable_scope('layer-5'):
                 net = relu(concat(net, encoder.l2))
-                net = deconv(net, filters = 16, kernel_size = kernel_size, stride = stride)
+                net = deconv(net, filters = 9, kernel_size = kernel_size, stride = stride)
                 net = batch_norm(net, is_training = is_training, reuse = reuse)
 
             with tf.variable_scope('layer-6'):

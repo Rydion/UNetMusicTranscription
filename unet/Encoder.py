@@ -35,39 +35,39 @@ class Encoder(object):
     def __init__(self, input_tensor, is_training, reuse):
         net = input_tensor
 
-        kernel_size = (5, 5)
-        stride = (1, 1)
+        kernel_size = (3, 7)
+        stride = (1, 2)
         with tf.variable_scope('encoder'):
             with tf.variable_scope('layer-1'):
-                net = conv(net, filters = 16, kernel_size = kernel_size, stride = stride)
+                net = conv(net, filters = 9, kernel_size = kernel_size, stride = stride)
                 self.l1 = net
 
             with tf.variable_scope('layer-2'):
                 net = lrelu(net)
-                net = conv(net, filters = 32, kernel_size = kernel_size, stride = stride)
+                net = conv(net, filters = 18, kernel_size = kernel_size, stride = stride)
                 net = batch_norm(net, is_training = is_training, reuse = reuse)
                 self.l2 = net
 
             with tf.variable_scope('layer-3'):
                 net = lrelu(net)
-                net = conv(net, filters = 64, kernel_size = kernel_size, stride = stride)
+                net = conv(net, filters = 36, kernel_size = kernel_size, stride = stride)
                 net = batch_norm(net, is_training = is_training, reuse = reuse)
                 self.l3 = net
 
             with tf.variable_scope('layer-4'):
                 net = lrelu(net)
-                net = conv(net, filters = 128, kernel_size = kernel_size, stride = stride)
+                net = conv(net, filters = 72, kernel_size = kernel_size, stride = stride)
                 net = batch_norm(net, is_training = is_training, reuse = reuse)
                 self.l4 = net
 
             with tf.variable_scope('layer-5'):
                 net = lrelu(net)
-                net = conv(net, filters = 256, kernel_size = kernel_size, stride = stride)
+                net = conv(net, filters = 144, kernel_size = kernel_size, stride = stride)
                 net = batch_norm(net, is_training = is_training, reuse = reuse)
                 self.l5 = net
 
             with tf.variable_scope('layer-6'):
                 net = lrelu(net)
-                net = conv(net, filters = 512, kernel_size = kernel_size, stride = stride)
+                net = conv(net, filters = 288, kernel_size = kernel_size, stride = stride)
 
             self.output = net
