@@ -23,8 +23,11 @@ def get_chunk_generator(matrix, chunk_length):
         yield matrix[:, i:i + chunk_length]
 
 def expand_array(arr, size, pixel_mult, dim):
-    result = np.zeros(size)
     orig_size = np.shape(arr)
+    if orig_size[dim] >= size[dim]:
+        return arr
+
+    result = np.zeros(size)
     for i in range(orig_size[dim]):
         for j in range(pixel_mult):
             if dim == 0:

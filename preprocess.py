@@ -15,6 +15,7 @@ def main(
     output_suffix,
     transformation,
     downsample_rate,
+    samples_per_second,
     duration_multiplier,
     color
 ):
@@ -24,7 +25,8 @@ def main(
         img_format,
         input_suffix,
         output_suffix,
-        downsample_rate
+        downsample_rate,
+        samples_per_second
     )
     preprocessor.preprocess(
         gen_input = True,
@@ -53,11 +55,12 @@ if __name__ == '__main__':
     # preprocessing conf
     process_conf = conf['processing']
     DOWNSAMPLE_RATE = int(process_conf['downsample'])
+    SAMPLES_PER_SECOND = int(process_conf['samples_per_second'])
 
     # paths
     DATA_SRC_PATH = os.path.join('./data/raw/', DATASET)
 
-    FULL_DATASET = '{0}.{1}.{2}.{3}'.format(DATASET, TRANSFORMATION, DOWNSAMPLE_RATE, DURATION_MULTIPLIER)
+    FULL_DATASET = '{0}.{1}.dr-{2}.sps-{3}.dm-{4}'.format(DATASET, TRANSFORMATION, DOWNSAMPLE_RATE, SAMPLES_PER_SECOND, DURATION_MULTIPLIER)
     DATASET_DST_PATH = os.path.join('./data/preprocessed/', FULL_DATASET)
 
     print(DATASET_DST_PATH)
@@ -70,6 +73,7 @@ if __name__ == '__main__':
         OUTPUT_SUFFIX,
         TRANSFORMATION,
         DOWNSAMPLE_RATE,
+        SAMPLES_PER_SECOND,
         DURATION_MULTIPLIER,
         COLOR
     )

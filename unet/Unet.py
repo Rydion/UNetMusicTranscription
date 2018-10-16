@@ -19,7 +19,7 @@ def l1_loss(x, y):
 def l2_loss(x, y):
     return tf.nn.l2_loss(tf.abs(x - y))
 
-def sigmoid_xentropy(x, y):
+def sigmoid_xentropy(x, y, weight):
     #weights = tf.equal(y, 1.0)
 
     #note_pixels = tf.count_nonzero(weights, dtype = tf.int32)
@@ -45,7 +45,7 @@ def sigmoid_xentropy(x, y):
     ce = tf.nn.weighted_cross_entropy_with_logits(
         targets = y,
         logits = x,
-        pos_weight = 40
+        pos_weight = weight
     )
     
     return tf.reduce_mean(ce)
@@ -59,15 +59,16 @@ def normalize(x):
     )
 
 class UNetModel(object):
-    def __init__(self, input, output, is_training):
+    def __init__(self, input, output, is_training, weight):
         self.input = input
         self.output = output
         self.is_training = is_training
+        self._weight = weight
 
         self.unet = UNet(
             self.input,
-            is_training = self.is_training,
-            name = 'transcription-unet',
+            self.is_training,
+            'transcription-unet',
             reuse = False
         )
 
@@ -76,7 +77,7 @@ class UNetModel(object):
 
         #self.cost = l1_loss(self.prediction, self.output)
         #self.cost = l2_loss(self.prediction, self.output)
-        self.cost = sigmoid_xentropy(self._prediction, self.output)
+        self.cost = sigmoid_xentropy(self._prediction, self.output, self._weight)
         #self.cost = softmax_xentropy(self.prediction, self.output)
 
         self.optimizer = tf.train.AdamOptimizer(

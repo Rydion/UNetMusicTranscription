@@ -35,16 +35,16 @@ class Preprocessor:
         true_len = num + remainder
         return true_len//dem
 
-    def __init__(self, src_dir, dst_dir, img_format, input_suffix, output_suffix, downsample_rate):
+    def __init__(self, src_dir, dst_dir, img_format, input_suffix, output_suffix, downsample_rate, samples_per_second):
         self.src_dir = src_dir
         self.dst_dir = dst_dir
         self.training_dst_dir = os.path.join(self.dst_dir, 'training')
         self.test_dst_dir = os.path.join(self.dst_dir, 'test')
         self.img_format = img_format
         self._downsample_rate = downsample_rate
+        self._samples_per_second = samples_per_second
 
         self._fill_digits = 4
-        self._samples_per_second = 32
         self._cqt_stride = self._downsample_rate//self._samples_per_second
         self._stft_window_length = 1024
         self._stft_stride = self._stft_window_length//2
@@ -101,7 +101,7 @@ class Preprocessor:
             spectrogram_img = spectrogram.values
 
             num_notes = 96
-            midi_img = midi.get_pianoroll(32, note_min = 12, num_notes = num_notes) # 8 octaves starting at C0
+            midi_img = midi.get_pianoroll(self._samples_per_second, note_min = 12, num_notes = num_notes) # 8 octaves starting at C0
             samples = np.shape(midi_img)[1]
             pixels_per_note = np.shape(spectrogram_img)[0]//num_notes
             midi_img = expand_array(midi_img, (np.shape(spectrogram_img)[0], samples), pixels_per_note, 0)

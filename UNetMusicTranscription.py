@@ -22,7 +22,8 @@ class Wrapper(object):
         input_suffix,
         output_suffix,
         batch_size,
-        num_epochs
+        num_epochs,
+        weight
     ):
         self.sess = sess
 
@@ -45,7 +46,8 @@ class Wrapper(object):
         self.model = UNetModel(
             self.input,
             self.output,
-            self.is_training
+            self.is_training,
+            weight
         )
 
         sess.run(tf.global_variables_initializer())
@@ -197,6 +199,7 @@ def init(
     output_suffix,
     transformation,
     downsample_rate,
+    samples_per_second,
     multiplier,
     color
 ):
@@ -214,7 +217,8 @@ def init(
             img_format,
             input_suffix,
             output_suffix,
-            downsample_rate
+            downsample_rate,
+            samples_per_second
         )
         preprocessor.preprocess(
             transformation = transformation,
@@ -234,12 +238,14 @@ def main(
     img_format,
     transformation,
     downsample_rate,
+    samples_per_second,
     multiplier,
     color,
     input_suffix,
     output_suffix,
     batch_size,
-    num_epochs
+    num_epochs,
+    weight
 ):
     sess = init(
         data_src_dir,
@@ -252,6 +258,7 @@ def main(
         output_suffix,
         transformation,
         downsample_rate,
+        samples_per_second,
         multiplier,
         color
     )
@@ -263,7 +270,8 @@ def main(
         input_suffix,
         output_suffix,
         batch_size,
-        num_epochs
+        num_epochs,
+        weight
     )
     wrapper.train(model_dst_dir, training_plot_dst_dir, color)
     wrapper.test(plot = True, plot_dest_dir = test_plot_dst_dir, color = color)
@@ -285,19 +293,21 @@ if __name__ == '__main__':
     # preprocessing conf
     process_conf = conf['processing']
     DOWNSAMPLE_RATE = int(process_conf['downsample'])
+    SAMPLES_PER_SECOND = int(process_conf['samples_per_second'])
 
     # training conf
     training_conf = conf['training']
     BATCH_SIZE = int(training_conf['batch'])
     NUM_EPOCHS = int(training_conf['epochs'])
+    WEIGHT = int(training_conf['weight'])
 
     # paths
     DATA_SRC_DIR = os.path.join('./data/raw/', DATASET) 
 
-    FULL_DATASET = '{0}.{1}.{2}.{3}'.format(DATASET, TRANSFORMATION, DOWNSAMPLE_RATE, DURATION_MULTIPLIER)
+    FULL_DATASET = '{0}.{1}.dr-{2}.sps-{3}.dm-{4}'.format(DATASET, TRANSFORMATION, DOWNSAMPLE_RATE, SAMPLES_PER_SECOND, DURATION_MULTIPLIER)
     DATASET_SRC_DIR = os.path.join('./data/preprocessed/', FULL_DATASET)
 
-    MODEL_NAME = '{0}.{1}.{2}.{3}.{4}.{5}.40'.format(DATASET, TRANSFORMATION, DOWNSAMPLE_RATE, DURATION_MULTIPLIER, NUM_EPOCHS, BATCH_SIZE)
+    MODEL_NAME = '{0}.{1}.dr-{2}.sps-{3}.dm-{4}.ne-{5}.bs-{6}.w-{7}'.format(DATASET, TRANSFORMATION, DOWNSAMPLE_RATE, SAMPLES_PER_SECOND, DURATION_MULTIPLIER, NUM_EPOCHS, BATCH_SIZE, WEIGHT)
     RESULTS_DST_DIR = os.path.join('./results/', MODEL_NAME)
     MODEL_DST_DIR = os.path.join(RESULTS_DST_DIR, 'unet')
     TRAINING_PLOT_DST_DIR = os.path.join(RESULTS_DST_DIR, 'training-prediction')
@@ -312,10 +322,12 @@ if __name__ == '__main__':
         IMG_FORMAT,
         TRANSFORMATION,
         DOWNSAMPLE_RATE,
+        SAMPLES_PER_SECOND,
         DURATION_MULTIPLIER,
         COLOR,   
         INPUT_SUFFIX,
         OUTPUT_SUFFIX,
         BATCH_SIZE,
-        NUM_EPOCHS
+        NUM_EPOCHS,
+        WEIGHT
     )
