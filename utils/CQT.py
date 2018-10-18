@@ -20,10 +20,8 @@ class Cqt(Spectrogram):
             bins_per_octave = bins_per_octave,
             hop_length = stride
         )
-        #mean = np.mean(values, axis = 1, keepdims = True)
-        #std = np.std(values, axis = 1, keepdims = True)
-        #values = np.divide(np.subtract(values, mean), std)
         values = librosa.amplitude_to_db(np.abs(values), ref = np.max)
+        values = (values - np.mean(values))/np.std(values)
         values = Cqt.normalize_values(values)
         return Cqt(values, sample_rate)
 

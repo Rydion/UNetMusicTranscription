@@ -39,8 +39,11 @@ class Preprocessor:
         self.src_dir = src_dir
         self.dst_dir = dst_dir
         self.training_dst_dir = os.path.join(self.dst_dir, 'training')
+        self.validation_dst_dir = os.path.join(self.dst_dir, 'validation')
         self.test_dst_dir = os.path.join(self.dst_dir, 'test')
         self.img_format = img_format
+        self._input_suffix = input_suffix
+        self._output_suffix = output_suffix
         self._downsample_rate = downsample_rate
         self._samples_per_second = samples_per_second
 
@@ -48,8 +51,7 @@ class Preprocessor:
         self._cqt_stride = self._downsample_rate//self._samples_per_second
         self._stft_window_length = 1024
         self._stft_stride = self._stft_window_length//2
-        self._input_suffix = input_suffix
-        self._output_suffix = output_suffix
+        self._gt_suffix = '.gt'
 
     def preprocess(self, gen_input = True, gen_output = True, transformation = 'stft', duration_multiplier = 1, color = False):
         self._delete_dst_dir()
@@ -104,11 +106,11 @@ class Preprocessor:
             midi_img = midi.get_pianoroll(self._samples_per_second, note_min = 12, num_notes = num_notes) # 8 octaves starting at C0
             samples = np.shape(midi_img)[1]
             pixels_per_note = np.shape(spectrogram_img)[0]//num_notes
-            midi_img = expand_array(midi_img, (np.shape(spectrogram_img)[0], samples), pixels_per_note, 0)
+            midi_img_expanded = expand_array(midi_img, (np.shape(spectrogram_img)[0], samples), pixels_per_note, 0)
 
             duration = int(duration)
-            subdivisions = duration*duration_multiplier
-            slice_length = np.shape(spectrogram_img)[1]//subdivisions
+            slice_length = np.shape(spectrogram_img)[1]//duration
+            slice_length = slice_length*duration_multiplier
 
             if gen_input:
                 #spectrogram.save(os.path.join(self.dst_dir, file_name + '.spectrogram.png'), duration, 84, color = color)
@@ -117,8 +119,12 @@ class Preprocessor:
 
             if gen_output:
                 #midi.save(os.path.join(self.dst_dir, file_name + '.midi.png'), duration, plain = False)
-                chunks = get_chunk_generator(midi_img, slice_length)
+                # UNET ground truth
+                chunks = get_chunk_generator(midi_img_expanded, slice_length)
                 self._save_sliced(chunks, file_name, file_suffix = self._output_suffix, binary = True)
+                # Validation ground truth
+                chunks = get_chunk_generator(midi_img, slice_length)
+                self._save_sliced(chunks, file_name, file_suffix = self._gt_suffix, binary = True)
 
             # Split into train/test by class
             self._split()
@@ -135,6 +141,7 @@ class Preprocessor:
     def _create_dst_dirs(self):
         os.makedirs(self.dst_dir)
         os.makedirs(self.training_dst_dir)
+        os.makedirs(self.validation_dst_dir)
         os.makedirs(self.test_dst_dir)
 
     def _save_sliced(self, chunks, file_name, file_suffix = '', binary = False):
@@ -172,23 +179,33 @@ class Preprocessor:
             input_file = file
             output_file_name = os.path.splitext(file_name)[0] + self._output_suffix
             output_file = output_file_name + file_extension
+            gt_file_name = os.path.splitext(file_name)[0] + self._gt_suffix
+            gt_file = gt_file_name + file_extension
             if os.path.isfile(os.path.join(self.dst_dir, output_file)):
-                files.append((os.path.join(self.dst_dir, input_file), os.path.join(self.dst_dir, output_file)))
+                files.append((os.path.join(self.dst_dir, input_file), os.path.join(self.dst_dir, output_file), os.path.join(self.dst_dir, gt_file)))
 
         dataset_size = len(files)
         training_dataset_size = int(0.8*dataset_size)
-        test_dataset_size = int(0.2*dataset_size)
-        rounding_error = dataset_size - training_dataset_size - test_dataset_size
+        validation_dataset_size = int(0.1*dataset_size)
+        test_dataset_size = int(0.1*dataset_size)
+        rounding_error = dataset_size - training_dataset_size - validation_dataset_size - test_dataset_size
         training_dataset_size = training_dataset_size + rounding_error
 
         np.random.shuffle(files)
-        training_files, test_files = files[:training_dataset_size], files[training_dataset_size:]
+        training_files, validation_files, test_files = files[:training_dataset_size], files[training_dataset_size:training_dataset_size + validation_dataset_size], files[training_dataset_size + validation_dataset_size:]
 
         for f in training_files:
-            input_file, output_file = f
+            input_file, output_file, gt_file = f
             shutil.move(input_file, self.training_dst_dir)
             shutil.move(output_file, self.training_dst_dir)
+            shutil.move(gt_file, self.training_dst_dir)
+        for f in validation_files:
+            input_file, output_file, gt_file = f
+            shutil.move(input_file, self.validation_dst_dir)
+            shutil.move(output_file, self.validation_dst_dir)
+            shutil.move(gt_file, self.validation_dst_dir)
         for f in test_files:
-            input_file, output_file = f
+            input_file, output_file, gt_file = f
             shutil.move(input_file, self.test_dst_dir)
             shutil.move(output_file, self.test_dst_dir)
+            shutil.move(gt_file, self.test_dst_dir)

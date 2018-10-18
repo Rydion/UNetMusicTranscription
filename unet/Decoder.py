@@ -38,7 +38,7 @@ class Decoder(object):
     def __init__(self, input_tensor, encoder, is_training, reuse):
         net = input_tensor
 
-        kernel_size = (7, 7)
+        kernel_size = (5, 5)
         stride = (1, 2)
         with tf.variable_scope('decoder'):
             with tf.variable_scope('layer-1'):

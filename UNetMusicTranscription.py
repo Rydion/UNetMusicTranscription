@@ -167,19 +167,15 @@ class Wrapper(object):
         x = x[0, ..., 0]
         y = y[0, ..., 0]
         prediction = prediction[0, ..., 0]
-        mask07 = prediction > 0.7
-        mask08 = prediction > 0.8
-        mask09 = prediction > 0.9
-        mask1 = prediction > 0.99
 
         fig, ax = plt.subplots(1, 7)
         ax[0].imshow(x, vmin = 0, vmax = 1, aspect = 'auto', cmap = None if color else plt.cm.gray)
         ax[1].imshow(y, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
         ax[2].imshow(prediction, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
-        ax[3].imshow(mask07, aspect = 'auto', cmap = plt.cm.gray)
-        ax[4].imshow(mask08, aspect = 'auto', cmap = plt.cm.gray)
-        ax[5].imshow(mask09, aspect = 'auto', cmap = plt.cm.gray)
-        ax[6].imshow(mask1, aspect = 'auto', cmap = plt.cm.gray)
+        ax[3].imshow(prediction > 0.6, aspect = 'auto', cmap = plt.cm.gray)
+        ax[4].imshow(prediction > 0.7, aspect = 'auto', cmap = plt.cm.gray)
+        ax[5].imshow(prediction > 0.8, aspect = 'auto', cmap = plt.cm.gray)
+        ax[6].imshow(prediction > 0.9, aspect = 'auto', cmap = plt.cm.gray)
 
         if save:
             fig.savefig(os.path.join(dst_dir, '{0}.png'.format(id)))
