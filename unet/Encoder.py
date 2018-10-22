@@ -15,59 +15,44 @@ def conv(inputs, filters, kernel_size, stride):
     )
 
 def lrelu(x, leak = 0.2):
+    return tf.nn.leaky_relu(x, alpha = leak)
+    '''
     with tf.variable_scope('lrelu'):
         f1 = 0.5*(1 + leak)
         f2 = 0.5*(1 - leak)
         return f1*x + f2*abs(x)
+    '''
 
 def batch_norm(inputs, is_training, reuse):
-    return tf.contrib.layers.batch_norm(
+    return tf.layers.batch_normalization(
         inputs,
-        decay = 0.9,
-        updates_collections = None,
+        momentum = 0.9,
         epsilon = 1e-5,
-        scale = True,
-        is_training = is_training,
+        training = is_training,
         reuse = reuse
     )
 
 class Encoder(object):
-    def __init__(self, input_tensor, is_training, reuse):
+    def __init__(self, input_tensor, kernel_size, is_training, reuse):
         net = input_tensor
+        self.layers = []
 
-        kernel_size = (5, 5)
-        stride = (1, 2)
         with tf.variable_scope('encoder'):
-            with tf.variable_scope('layer-1'):
-                net = conv(net, filters = 9, kernel_size = kernel_size, stride = stride)
-                self.l1 = net
-
-            with tf.variable_scope('layer-2'):
-                net = lrelu(net)
-                net = conv(net, filters = 18, kernel_size = kernel_size, stride = stride)
-                net = batch_norm(net, is_training = is_training, reuse = reuse)
-                self.l2 = net
-
-            with tf.variable_scope('layer-3'):
-                net = lrelu(net)
-                net = conv(net, filters = 36, kernel_size = kernel_size, stride = stride)
-                net = batch_norm(net, is_training = is_training, reuse = reuse)
-                self.l3 = net
-
-            with tf.variable_scope('layer-4'):
-                net = lrelu(net)
-                net = conv(net, filters = 72, kernel_size = kernel_size, stride = stride)
-                net = batch_norm(net, is_training = is_training, reuse = reuse)
-                self.l4 = net
-
-            with tf.variable_scope('layer-5'):
-                net = lrelu(net)
-                net = conv(net, filters = 144, kernel_size = kernel_size, stride = stride)
-                net = batch_norm(net, is_training = is_training, reuse = reuse)
-                self.l5 = net
-
-            with tf.variable_scope('layer-6'):
-                net = lrelu(net)
-                net = conv(net, filters = 288, kernel_size = kernel_size, stride = stride)
+            n = 1
+            filters = 9
+            num_layers = 6
+            while n <= num_layers:
+                with tf.variable_scope('layer-{0}'.format(n)):
+                    #print('Encoder. Layer {0}, filters {1}.'.format(n, filters))
+                    if n > 1:
+                        net = lrelu(net)
+                    stride = (3, 2) if n == 1 else (2, 2)
+                    #stride = (1, 2)
+                    net = conv(net, filters = filters, kernel_size = kernel_size, stride = stride)
+                    if n != num_layers:
+                        net = batch_norm(net, is_training = is_training, reuse = reuse)
+                        self.layers.append(net)
+                filters = filters*2
+                n = n + 1
 
             self.output = net

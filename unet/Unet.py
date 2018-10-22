@@ -13,13 +13,7 @@ def tanh(inputs):
 def sigmoid(inputs):
     return tf.nn.sigmoid(inputs)
 
-def l1_loss(x, y):
-    return tf.reduce_mean(tf.abs(x - y))
-
-def l2_loss(x, y):
-    return tf.nn.l2_loss(tf.abs(x - y))
-
-def sigmoid_xentropy(x, y, weight):
+def sigmoid_xentropy(logits, targets, weight):
     #weights = tf.equal(y, 1.0)
 
     #note_pixels = tf.count_nonzero(weights, dtype = tf.int32)
@@ -35,33 +29,25 @@ def sigmoid_xentropy(x, y, weight):
     #weights = tf.where(weights, trueCase, falseCase)
     #weights = tf.where(weights, trueCase, falseCase)
     #weighted_logits = weights*x
-    '''
-    ce = tf.nn.sigmoid_cross_entropy_with_logits(
-        labels = y,
-        logits = x
-    )
-    return tf.reduce_mean(ce)
-    '''
+
+    
     ce = tf.nn.weighted_cross_entropy_with_logits(
-        targets = y,
-        logits = x,
+        targets = targets,
+        logits = logits,
         pos_weight = weight
     )
-    
+    '''
+    ce = tf.nn.sigmoid_cross_entropy_with_logits(
+        labels = targets,
+        logits = logits
+    )
+    '''
     return tf.reduce_mean(ce)
 
-def normalize(x):
-    min = tf.reduce_min(x)
-    max = tf.reduce_max(x)
-    return tf.div(
-        tf.subtract(x, min),
-        tf.subtract(max, min)
-    )
-
 class UNetModel(object):
-    def __init__(self, input, output, is_training, weight):
+    def __init__(self, input, ground_truth, is_training, weight):
         self.input = input
-        self.output = output
+        self.ground_truth = ground_truth
         self.is_training = is_training
         self._weight = weight
 
@@ -71,24 +57,20 @@ class UNetModel(object):
             'transcription-unet',
             reuse = False
         )
-
-        self._prediction = self.unet.output
-        self.prediction = sigmoid(self._prediction)
-
-        #self.cost = l1_loss(self.prediction, self.output)
-        #self.cost = l2_loss(self.prediction, self.output)
-        self.cost = sigmoid_xentropy(self._prediction, self.output, self._weight)
-        #self.cost = softmax_xentropy(self.prediction, self.output)
-
         self.optimizer = tf.train.AdamOptimizer(
             learning_rate = 0.0002,
             beta1 = 0.5
         )
+
+        self.prediction = self.unet.output
+        self.cost = sigmoid_xentropy(self.prediction, self.ground_truth, self._weight)
+      
         self.train_op = self.optimizer.minimize(self.cost)
 
 class UNet(object):
     def __init__(self, input, is_training, name, reuse = False):
         with tf.variable_scope(name, reuse = reuse):
-            self.encoder = Encoder(input, is_training, reuse)
-            self.decoder = Decoder(self.encoder.output, self.encoder, is_training, reuse)
-            self.output = self.decoder.output
+            kernel_size = (5, 5)
+            self.encoder = Encoder(input, kernel_size, is_training, reuse)
+            self.decoder = Decoder(self.encoder.output, self.encoder, kernel_size, is_training, reuse)
+            self.output = sigmoid(self.decoder.output)

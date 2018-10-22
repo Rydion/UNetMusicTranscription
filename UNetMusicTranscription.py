@@ -3,6 +3,7 @@ author: Adrian Hintze
 '''
 
 import os
+import time
 import shutil
 import configparser
 import numpy as np
@@ -52,30 +53,37 @@ class Wrapper(object):
 
         sess.run(tf.global_variables_initializer())
 
-    def train(self, model_dst_dir, plot_dest_dir, color = False):
+    def train(self, model_dst_dir, training_plot_dst_dir, test_plot_dst_dir, color = False):
         i = 0
+        samples = 0
         epoch = 1
         epoch_cost = 0
         try:
             while True:
                 x, y, prediction, cost, _ = self.sess.run(
-                    [self.model.input, self.model.output, self.model.prediction, self.model.cost, self.model.train_op],
+                    [self.model.input, self.model.ground_truth, self.model.prediction, self.model.cost, self.model.train_op],
                     feed_dict = { self.model.is_training: True, self.handle: self.training_handle }
                 )
 
-                i = i + np.shape(x)[0]
+                i = i + 1
+                samples = samples + np.shape(x)[0]
                 epoch_cost = epoch_cost + cost
 
                 # each epoch
-                if i == self.training_dataset_size:
+                if samples == self.training_dataset_size:
                     self._save_model(model_dst_dir, global_step = epoch)
-                    self._plot(x, y, prediction, color, save = True, id = 'epoch-{0}'.format(epoch), dst_dir = plot_dest_dir)
+                    self._plot(x, y, prediction, color, save = True, id = 'epoch-{0}'.format(epoch), dst_dir = training_plot_dst_dir)
 
                     training_error = epoch_cost/i
-                    test_error = self.test()
+
+                    epoch_test_plot_dst_dir =  os.path.join(test_plot_dst_dir, str(epoch))
+                    os.makedirs(epoch_test_plot_dst_dir)
+                    test_error = self.test(plot = True, plot_dest_dir = epoch_test_plot_dst_dir)
+
                     print('Epoch {0} finished. Training error: {1}. Test error: {2}'.format(epoch, training_error, test_error))
 
                     i = 0
+                    samples = 0
                     epoch = epoch + 1
                     epoch_cost = 0
 
@@ -86,23 +94,25 @@ class Wrapper(object):
 
     def test(self, plot = False, plot_dest_dir = None, color = False):
         i = 0
+        samples = 0
         total_cost = 0
         try:
             while True:
-                x, y = self.sess.run([self.input, self.output], feed_dict = { self.handle: self.test_handle })
+                x, y = self.sess.run([self.model.input, self.model.ground_truth], feed_dict = { self.handle: self.test_handle })
                 prediction, cost = self.sess.run(
                     [self.model.prediction, self.model.cost],
                     feed_dict = { self.model.is_training: False, self.model.input: x, self.handle: self.test_handle }
                 )
 
-                i = i + np.shape(x)[0]
+                i = i + 1
+                samples = samples + np.shape(x)[0]
                 total_cost = total_cost + cost
 
                 if plot:
                     self._plot(x, y, prediction, color, save = True, id = 'sample-{0}'.format(i), dst_dir = plot_dest_dir)
 
                 # one epoch
-                if i == self.test_dataset_size:
+                if samples == self.test_dataset_size:
                     break
 
         except tf.errors.OutOfRangeError:
@@ -168,14 +178,17 @@ class Wrapper(object):
         y = y[0, ..., 0]
         prediction = prediction[0, ..., 0]
 
-        fig, ax = plt.subplots(1, 7)
+        fig, ax = plt.subplots(1, 10)
         ax[0].imshow(x, vmin = 0, vmax = 1, aspect = 'auto', cmap = None if color else plt.cm.gray)
         ax[1].imshow(y, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
         ax[2].imshow(prediction, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
-        ax[3].imshow(prediction > 0.6, aspect = 'auto', cmap = plt.cm.gray)
-        ax[4].imshow(prediction > 0.7, aspect = 'auto', cmap = plt.cm.gray)
-        ax[5].imshow(prediction > 0.8, aspect = 'auto', cmap = plt.cm.gray)
-        ax[6].imshow(prediction > 0.9, aspect = 'auto', cmap = plt.cm.gray)
+        ax[3].imshow(prediction > 0.3, vmin = False, vmax = True, aspect = 'auto', cmap = plt.cm.gray)
+        ax[4].imshow(prediction > 0.4, vmin = False, vmax = True, aspect = 'auto', cmap = plt.cm.gray)
+        ax[5].imshow(prediction > 0.5, vmin = False, vmax = True, aspect = 'auto', cmap = plt.cm.gray)
+        ax[6].imshow(prediction > 0.6, vmin = False, vmax = True, aspect = 'auto', cmap = plt.cm.gray)
+        ax[7].imshow(prediction > 0.7, vmin = False, vmax = True, aspect = 'auto', cmap = plt.cm.gray)
+        ax[8].imshow(prediction > 0.8, vmin = False, vmax = True, aspect = 'auto', cmap = plt.cm.gray)
+        ax[9].imshow(prediction > 0.9, vmin = False, vmax = True, aspect = 'auto', cmap = plt.cm.gray)
 
         if save:
             fig.savefig(os.path.join(dst_dir, '{0}.png'.format(id)))
@@ -199,12 +212,15 @@ def init(
     multiplier,
     color
 ):
-    if not os.path.isdir(model_dst_dir):
-        os.makedirs(model_dst_dir)
-    if not os.path.isdir(training_plot_dst_dir):
-        os.makedirs(training_plot_dst_dir)
-    if not os.path.isdir(test_plot_dst_dir):
-        os.makedirs(test_plot_dst_dir)
+    shutil.rmtree(model_dst_dir, ignore_errors = True)
+    shutil.rmtree(training_plot_dst_dir, ignore_errors = True)
+    shutil.rmtree(test_plot_dst_dir, ignore_errors = True)
+    # Without the delay sometimes weird shit happens when deleting/creating the folder
+    time.sleep(1)
+
+    os.makedirs(model_dst_dir)
+    os.makedirs(training_plot_dst_dir)
+    os.makedirs(test_plot_dst_dir)
 
     if not os.path.isdir(dataset_src_dir):
         preprocessor = Preprocessor(
@@ -269,7 +285,7 @@ def main(
         num_epochs,
         weight
     )
-    wrapper.train(model_dst_dir, training_plot_dst_dir, color)
+    wrapper.train(model_dst_dir, training_plot_dst_dir, test_plot_dst_dir, color)
     wrapper.test(plot = True, plot_dest_dir = test_plot_dst_dir, color = color)
 
 if __name__ == '__main__':
