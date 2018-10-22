@@ -7,9 +7,6 @@ import tensorflow as tf
 from unet.Encoder import Encoder
 from unet.Decoder import Decoder
 
-def tanh(inputs):
-    return tf.nn.tanh(inputs)
-
 def sigmoid(inputs):
     return tf.nn.sigmoid(inputs)
 
@@ -50,6 +47,10 @@ class UNetModel(object):
         self.ground_truth = ground_truth
         self.is_training = is_training
         self._weight = weight
+        self._optimizer = tf.train.AdamOptimizer(
+            learning_rate = 0.0002,
+            beta1 = 0.5
+        )
 
         self.unet = UNet(
             self.input,
@@ -57,20 +58,16 @@ class UNetModel(object):
             'transcription-unet',
             reuse = False
         )
-        self.optimizer = tf.train.AdamOptimizer(
-            learning_rate = 0.0002,
-            beta1 = 0.5
-        )
 
         self.prediction = self.unet.output
         self.cost = sigmoid_xentropy(self.prediction, self.ground_truth, self._weight)
       
-        self.train_op = self.optimizer.minimize(self.cost)
+        self.train_op = self._optimizer.minimize(self.cost)
 
 class UNet(object):
     def __init__(self, input, is_training, name, reuse = False):
         with tf.variable_scope(name, reuse = reuse):
             kernel_size = (5, 5)
             self.encoder = Encoder(input, kernel_size, is_training, reuse)
-            self.decoder = Decoder(self.encoder.output, self.encoder, kernel_size, is_training, reuse)
+            self.decoder = Decoder(self.encoder, kernel_size, is_training, reuse)
             self.output = sigmoid(self.decoder.output)

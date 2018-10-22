@@ -42,11 +42,11 @@ class Wrapper(object):
         self.training_handle = sess.run(self.training_dataset.make_one_shot_iterator().string_handle())
         self.test_handle = sess.run(self.test_dataset.make_one_shot_iterator().string_handle())
 
-        self.input, self.output = self.iterator.get_next()
+        self.input, self.ground_truth = self.iterator.get_next()
         self.is_training = tf.placeholder(dtype = bool, shape = ())
         self.model = UNetModel(
             self.input,
-            self.output,
+            self.ground_truth,
             self.is_training,
             weight
         )
@@ -61,8 +61,8 @@ class Wrapper(object):
         try:
             while True:
                 x, y, prediction, cost, _ = self.sess.run(
-                    [self.model.input, self.model.ground_truth, self.model.prediction, self.model.cost, self.model.train_op],
-                    feed_dict = { self.model.is_training: True, self.handle: self.training_handle }
+                    [self.input, self.ground_truth, self.model.prediction, self.model.cost, self.model.train_op],
+                    feed_dict = { self.is_training: True, self.handle: self.training_handle }
                 )
 
                 i = i + 1
@@ -101,7 +101,7 @@ class Wrapper(object):
                 x, y = self.sess.run([self.model.input, self.model.ground_truth], feed_dict = { self.handle: self.test_handle })
                 prediction, cost = self.sess.run(
                     [self.model.prediction, self.model.cost],
-                    feed_dict = { self.model.is_training: False, self.model.input: x, self.handle: self.test_handle }
+                    feed_dict = { self.is_training: False, self.input: x, self.handle: self.test_handle }
                 )
 
                 i = i + 1
@@ -121,7 +121,7 @@ class Wrapper(object):
             return total_cost/i
 
     def _get_datasets(self, src_dir, format, input_suffix, output_suffix, batch_size = 1, num_epochs = None):
-        def get_dataset(src_dir, format, input_suffix, bach_size, num_epochs = None):
+        def get_dataset(src_dir, format, input_suffix, output_suffix, bach_size, num_epochs = None):
             def parse_files(input_file, output_file):
                 def parse_file(file, channels):
                     img_string = tf.read_file(file)
@@ -132,7 +132,7 @@ class Wrapper(object):
                 channels = 1
                 return parse_file(input_file, channels), parse_file(output_file, channels)
 
-            def get_input_output_files(src_dir, format, input_suffix):
+            def get_input_output_files(src_dir, format, input_suffix, output_suffix):
                 input_files = []
                 output_files = []
                 for file in os.listdir(src_dir):
@@ -151,7 +151,7 @@ class Wrapper(object):
                         output_files.append(os.path.join(src_dir, output_file))
                 return input_files, output_files
 
-            input_files, output_files = get_input_output_files(src_dir, format, input_suffix)
+            input_files, output_files = get_input_output_files(src_dir, format, input_suffix, output_suffix)
             dataset = tf.data.Dataset \
                       .from_tensor_slices((input_files, output_files)) \
                       .map(parse_files) \
@@ -161,8 +161,21 @@ class Wrapper(object):
 
             return len(input_files), dataset
 
-        training_dataset_size, training_dataset = get_dataset(os.path.join(src_dir, 'training'), format, input_suffix, batch_size, num_epochs = num_epochs)
-        test_dataset_size, test_dataset = get_dataset(os.path.join(src_dir, 'test'), format, input_suffix, 1)
+        training_dataset_size, training_dataset = get_dataset(
+            os.path.join(src_dir, 'training'),
+            format,
+            input_suffix,
+            output_suffix,
+            batch_size,
+            num_epochs = num_epochs
+        )
+        test_dataset_size, test_dataset = get_dataset(
+            os.path.join(src_dir, 'test'),
+            format,
+            input_suffix,
+            output_suffix,
+            1
+        )
         return training_dataset_size, test_dataset_size, training_dataset, test_dataset
 
     def _save_model(self, dst_dir, global_step = None):

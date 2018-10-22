@@ -21,11 +21,13 @@ def concat(x, y):
     return tf.concat([x, y], axis = 3)
 
 def batch_norm(inputs, is_training, reuse):
-    return tf.layers.batch_normalization(
+    return tf.contrib.layers.batch_norm(
         inputs,
-        momentum = 0.9,
+        decay = 0.9,
+        updates_collections = None,
         epsilon = 1e-5,
-        training = is_training,
+        scale = True,
+        is_training = is_training,
         reuse = reuse
     )
 
@@ -33,8 +35,8 @@ def dropout(inputs, rate):
     return tf.nn.dropout(inputs, keep_prob = 1 - rate)
 
 class Decoder(object):
-    def __init__(self, input_tensor, encoder, kernel_size, is_training, reuse):
-        net = input_tensor
+    def __init__(self, encoder, kernel_size, is_training, reuse):
+        net = encoder.output
 
         with tf.variable_scope('decoder'):
             n = 1
@@ -42,7 +44,6 @@ class Decoder(object):
             num_layers = 6
             while n <= num_layers:
                 with tf.variable_scope('layer-{0}'.format(n)):
-                    #print('Encoder. Layer {0}, filters {1}.'.format(n, filters))
                     net = relu(net) if n == 1 else relu(concat(net, encoder.layers[num_layers - n]))
                     stride = (3, 2) if n == num_layers else (2, 2)
                     #stride = (1, 2)
