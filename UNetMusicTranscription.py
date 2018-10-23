@@ -14,6 +14,9 @@ import matplotlib.image as mpimg
 from unet.Unet import UNetModel
 from utils.Preprocessor import Preprocessor
 
+# Remove unnecessary tensorflow verbosity
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+
 class Wrapper(object):
     def __init__(
         self,
