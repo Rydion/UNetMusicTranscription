@@ -9,11 +9,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from PIL import Image
-from utils.AudioReader import AudioReader
-from utils.Stft import Stft
-from utils.Cqt import Cqt
-from utils.Midi import Midi
-from utils.functions import grey_scale, binarize, get_chunk_generator, expand_array
+from .AudioReader import AudioReader
+from .Stft import Stft
+from .Cqt import Cqt
+from .Midi import Midi
+from .functions import grey_scale, binarize, get_chunk_generator, expand_array
 
 # TODO:
 #   support other extensions apart from wav

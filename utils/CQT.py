@@ -7,7 +7,7 @@ import librosa.display
 import numpy as np
 import matplotlib.pyplot as plt
 
-from utils.Spectrogram import Spectrogram
+from .Spectrogram import Spectrogram
 
 class Cqt(Spectrogram):
     @classmethod
