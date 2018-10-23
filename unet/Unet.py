@@ -4,8 +4,8 @@ author: Adrian Hintze @Rydion
 
 import tensorflow as tf
 
-from Encoder import Encoder
-from Decoder import Decoder
+from unet.Encoder import Encoder
+from unet.Decoder import Decoder
 
 def sigmoid(inputs):
     return tf.nn.sigmoid(inputs)
