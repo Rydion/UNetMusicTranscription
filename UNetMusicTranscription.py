@@ -255,7 +255,9 @@ def init(
         )
 
     tf.reset_default_graph()
-    return tf.Session()
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
+    return tf.Session(config = config)
 
 def main(
     data_src_dir,
