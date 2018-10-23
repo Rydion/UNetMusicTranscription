@@ -1,0 +1,6 @@
+numpy
+tensorflow-gpu
+matplotlib
+pypianoroll
+librosa
+PIL
