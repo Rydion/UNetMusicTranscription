@@ -15,12 +15,8 @@ from utils.Cqt import Cqt
 from utils.Midi import Midi
 from utils.functions import grey_scale, binarize, get_chunk_generator, expand_array
 
-#plt.rcParams['figure.figsize'] = [4, 18]
-#plt.rcParams['figure.dpi'] = 32
-
 # TODO:
 #   support other extensions apart from wav
-#   make the size of the output/input pair images a parameter
 
 class Preprocessor:
     @staticmethod
