@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from abc import ABC, abstractmethod
-from utils.functions import normalize_array
+from functions import normalize_array
 
 class Spectrogram(ABC):
     @staticmethod
