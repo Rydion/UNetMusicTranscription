@@ -8,6 +8,9 @@ import shutil
 import configparser
 import numpy as np
 import tensorflow as tf
+import matplotlib
+if os.environ.get('DISPLAY','') == '':
+    matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
