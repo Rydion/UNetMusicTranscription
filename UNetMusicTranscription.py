@@ -25,12 +25,14 @@ class Wrapper(object):
         self,
         sess,
         dataset_src_dir,
+        model_src_dir,
         image_format,
         input_suffix,
         output_suffix,
         batch_size,
         num_epochs,
-        weight
+        weight,
+        state = None
     ):
         self.sess = sess
 
@@ -57,12 +59,15 @@ class Wrapper(object):
             weight
         )
 
-        self._results = {
-            'epoch': 1,
-            'cost': []
-        }
-
-        sess.run(tf.global_variables_initializer())
+        if state == None:
+            self._state = {
+                'epoch': 0,
+                'cost': []
+            }
+            sess.run(tf.global_variables_initializer())
+        else:
+            self._state = state
+            self._load_model(model_src_dir, global_step = self._state['epoch'])
 
     def train(self, dst_dir, model_dst_dir, training_plot_dst_dir, test_plot_dst_dir):
         i = 0
@@ -81,26 +86,29 @@ class Wrapper(object):
 
                 # each epoch
                 if samples == self.training_dataset_size:
-                    self._save_model(model_dst_dir, global_step = self._results['epoch'])
-                    self._plot(x, y, prediction, save = True, id = 'epoch-{0}'.format(self._results['epoch']), dst_dir = training_plot_dst_dir)
+                    self._state['epoch'] = self._state['epoch'] + 1
+
+                    self._save_model(model_dst_dir, global_step = self._state['epoch'])
+                    self._plot(x, y, prediction, save = True, id = 'epoch-{0}'.format(self._state['epoch']), dst_dir = training_plot_dst_dir)
 
                     training_error = epoch_cost/i
 
-                    epoch_test_plot_dst_dir =  os.path.join(test_plot_dst_dir, str(self._results['epoch']))
-                    os.makedirs(epoch_test_plot_dst_dir)
+                    epoch_test_plot_dst_dir =  os.path.join(test_plot_dst_dir, str(self._state['epoch']))
+                    if not os.path.exists(epoch_test_plot_dst_dir):
+                        os.makedirs(epoch_test_plot_dst_dir)
                     test_error = self.test(plot = True, plot_dest_dir = epoch_test_plot_dst_dir)
 
                     # Update results and save
-                    self._results['cost'].append((training_error, test_error))
+                    self._state['cost'].append((training_error, test_error))
                     with open(os.path.join(dst_dir, 'results.pkl'), 'wb') as f:
-                        pickle.dump(self._results, f, pickle.HIGHEST_PROTOCOL)
+                        pickle.dump(self._state, f, pickle.HIGHEST_PROTOCOL)
 
-                    print('Epoch {0} finished. Training error: {1}. Test error: {2}'.format(self._results['epoch'], training_error, test_error))
-                    print(self._results)
+                    print('Epoch {0} finished. Training error: {1}. Test error: {2}'.format(self._state['epoch'], training_error, test_error))
+
                     i = 0
                     samples = 0
                     epoch_cost = 0
-                    self._results['epoch'] = self._results['epoch'] + 1
+
 
         except tf.errors.OutOfRangeError:
             pass
@@ -199,7 +207,7 @@ class Wrapper(object):
 
     def _load_model(self, src_dir, global_step = None):
         saver = tf.train.Saver()
-        model = 'model.ckpt' if global_step == None else 'model-{0}.ckpt'.format(global_step)
+        model = 'model.ckpt' if global_step == None else 'model.ckpt-{0}'.format(global_step)
         saver.restore(self.sess, os.path.join(src_dir, model))
 
     def _plot(self, x, y, prediction, save = False, id = 0, dst_dir = None):
@@ -239,32 +247,34 @@ def init(
     transformation,
     downsample_rate,
     samples_per_second,
-    multiplier
+    multiplier,
+    load
 ):
-    # Remove previous run if it exists
-    shutil.rmtree(dst_dir, ignore_errors = True)
-    # Without the delay sometimes weird shit happens when deleting/creating the folder
-    time.sleep(1)
+    if not load:
+        shutil.rmtree(dst_dir, ignore_errors = True)
+        # Without the delay sometimes weird shit happens when deleting/creating the folder
+        time.sleep(1)
 
-    # Crate necessary folders
-    os.makedirs(model_dst_dir)
-    os.makedirs(training_plot_dst_dir)
-    os.makedirs(test_plot_dst_dir)
+        # Crate necessary folders
+        os.makedirs(model_dst_dir)
+        os.makedirs(training_plot_dst_dir)
+        os.makedirs(test_plot_dst_dir)
 
-    if not os.path.isdir(dataset_src_dir):
-        preprocessor = Preprocessor(
-            data_src_dir,
-            dataset_src_dir,
-            img_format,
-            input_suffix,
-            output_suffix,
-            downsample_rate,
-            samples_per_second
-        )
-        preprocessor.preprocess(
-            transformation = transformation,
-            duration_multiplier = multiplier
-        )
+        # Preprocess data if necessary
+        if not os.path.isdir(dataset_src_dir):
+            preprocessor = Preprocessor(
+                data_src_dir,
+                dataset_src_dir,
+                img_format,
+                input_suffix,
+                output_suffix,
+                downsample_rate,
+                samples_per_second
+            )
+            preprocessor.preprocess(
+                transformation = transformation,
+                duration_multiplier = multiplier
+            )
 
     tf.reset_default_graph()
     config = tf.ConfigProto()
@@ -279,12 +289,13 @@ def main(
     training_plot_dst_dir,
     test_plot_dst_dir,
     img_format,
+    input_suffix,
+    output_suffix,
     transformation,
     downsample_rate,
     samples_per_second,
     multiplier,
-    input_suffix,
-    output_suffix,
+    load,
     batch_size,
     num_epochs,
     weight
@@ -302,18 +313,25 @@ def main(
         transformation,
         downsample_rate,
         samples_per_second,
-        multiplier
+        multiplier,
+        load
     )
 
+    state = None
+    if load:
+        with open(os.path.join(dst_dir, 'results.pkl'), 'rb') as f:
+            state = pickle.load(f)
     wrapper = Wrapper(
         sess,
         dataset_src_dir,
+        model_dst_dir,
         img_format,
         input_suffix,
         output_suffix,
         batch_size,
         num_epochs,
-        weight
+        weight,
+        state = state
     )
     wrapper.train(dst_dir, model_dst_dir, training_plot_dst_dir, test_plot_dst_dir)
     wrapper.test(plot = True, plot_dest_dir = test_plot_dst_dir)
@@ -338,6 +356,7 @@ if __name__ == '__main__':
 
     # training conf
     training_conf = conf['training']
+    LOAD = training_conf.getboolean('load')
     BATCH_SIZE = int(training_conf['batch'])
     NUM_EPOCHS = int(training_conf['epochs'])
     WEIGHT = int(training_conf['weight'])
@@ -362,12 +381,13 @@ if __name__ == '__main__':
         TRAINING_PLOT_DST_DIR,
         TEST_PLOT_DST_DIR,
         IMG_FORMAT,
+        INPUT_SUFFIX,
+        OUTPUT_SUFFIX,
         TRANSFORMATION,
         DOWNSAMPLE_RATE,
         SAMPLES_PER_SECOND,
         DURATION_MULTIPLIER,
-        INPUT_SUFFIX,
-        OUTPUT_SUFFIX,
+        LOAD,
         BATCH_SIZE,
         NUM_EPOCHS,
         WEIGHT
