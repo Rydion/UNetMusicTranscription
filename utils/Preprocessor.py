@@ -49,7 +49,7 @@ class Preprocessor:
         self._stft_stride = self._stft_window_length//2
         self._gt_suffix = '.gt'
 
-    def preprocess(self, gen_input = True, gen_output = True, transformation = 'stft', duration_multiplier = 1, color = False):
+    def preprocess(self, gen_input = True, gen_output = True, transformation = 'stft', duration_multiplier = 1):
         self._delete_dst_dir()
         self._create_dst_dirs()
 
@@ -109,7 +109,7 @@ class Preprocessor:
             slice_length = slice_length*duration_multiplier
 
             if gen_input:
-                #spectrogram.save(os.path.join(self.dst_dir, file_name + '.spectrogram.png'), duration, 84, color = color)
+                #spectrogram.save(os.path.join(self.dst_dir, file_name + '.spectrogram.png'), duration, 84)
                 chunks = get_chunk_generator(spectrogram_img, slice_length)
                 self._save_sliced(chunks, file_name, file_suffix = self._input_suffix, binary = False)
 

@@ -16,8 +16,7 @@ def main(
     transformation,
     downsample_rate,
     samples_per_second,
-    duration_multiplier,
-    color
+    duration_multiplier
 ):
     preprocessor = Preprocessor(
         data_src_path,
@@ -33,7 +32,6 @@ def main(
         gen_output = True,
         transformation = transformation,
         duration_multiplier = duration_multiplier,
-        color = color
     )
 
 if __name__ == '__main__':
@@ -44,7 +42,6 @@ if __name__ == '__main__':
 
     # global conf
     global_conf = conf['global']
-    COLOR = global_conf.getboolean('color')
     DATASET = global_conf['dataset']
     DURATION_MULTIPLIER = int(global_conf['multiplier'])
     TRANSFORMATION = global_conf['transformation']
@@ -74,6 +71,5 @@ if __name__ == '__main__':
         TRANSFORMATION,
         DOWNSAMPLE_RATE,
         SAMPLES_PER_SECOND,
-        DURATION_MULTIPLIER,
-        COLOR
+        DURATION_MULTIPLIER
     )

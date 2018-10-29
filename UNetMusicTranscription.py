@@ -5,6 +5,7 @@ author: Adrian Hintze
 import os
 import time
 import shutil
+import pickle
 import configparser
 import numpy as np
 import tensorflow as tf
@@ -56,12 +57,16 @@ class Wrapper(object):
             weight
         )
 
+        self._results = {
+            'epoch': 1,
+            'cost': []
+        }
+
         sess.run(tf.global_variables_initializer())
 
-    def train(self, model_dst_dir, training_plot_dst_dir, test_plot_dst_dir, color = False):
+    def train(self, dst_dir, model_dst_dir, training_plot_dst_dir, test_plot_dst_dir):
         i = 0
         samples = 0
-        epoch = 1
         epoch_cost = 0
         try:
             while True:
@@ -76,28 +81,33 @@ class Wrapper(object):
 
                 # each epoch
                 if samples == self.training_dataset_size:
-                    self._save_model(model_dst_dir, global_step = epoch)
-                    self._plot(x, y, prediction, color, save = True, id = 'epoch-{0}'.format(epoch), dst_dir = training_plot_dst_dir)
+                    self._save_model(model_dst_dir, global_step = self._results['epoch'])
+                    self._plot(x, y, prediction, save = True, id = 'epoch-{0}'.format(self._results['epoch']), dst_dir = training_plot_dst_dir)
 
                     training_error = epoch_cost/i
 
-                    epoch_test_plot_dst_dir =  os.path.join(test_plot_dst_dir, str(epoch))
+                    epoch_test_plot_dst_dir =  os.path.join(test_plot_dst_dir, str(self._results['epoch']))
                     os.makedirs(epoch_test_plot_dst_dir)
                     test_error = self.test(plot = True, plot_dest_dir = epoch_test_plot_dst_dir)
 
-                    print('Epoch {0} finished. Training error: {1}. Test error: {2}'.format(epoch, training_error, test_error))
+                    # Update results and save
+                    self._results['cost'].append((training_error, test_error))
+                    with open(os.path.join(dst_dir, 'results.pkl'), 'wb') as f:
+                        pickle.dump(self._results, f, pickle.HIGHEST_PROTOCOL)
 
+                    print('Epoch {0} finished. Training error: {1}. Test error: {2}'.format(self._results['epoch'], training_error, test_error))
+                    print(self._results)
                     i = 0
                     samples = 0
-                    epoch = epoch + 1
                     epoch_cost = 0
+                    self._results['epoch'] = self._results['epoch'] + 1
 
         except tf.errors.OutOfRangeError:
             pass
         finally:
             self._save_model(model_dst_dir)
 
-    def test(self, plot = False, plot_dest_dir = None, color = False):
+    def test(self, plot = False, plot_dest_dir = None):
         i = 0
         samples = 0
         total_cost = 0
@@ -114,7 +124,7 @@ class Wrapper(object):
                 total_cost = total_cost + cost
 
                 if plot:
-                    self._plot(x, y, prediction, color, save = True, id = 'sample-{0}'.format(i), dst_dir = plot_dest_dir)
+                    self._plot(x, y, prediction, save = True, id = 'sample-{0}'.format(i), dst_dir = plot_dest_dir)
 
                 # one epoch
                 if samples == self.test_dataset_size:
@@ -187,17 +197,18 @@ class Wrapper(object):
         saver = tf.train.Saver()
         return saver.save(self.sess, os.path.join(dst_dir, 'model.ckpt'), global_step = global_step)
 
-    def _load_model(self, src_dir):
+    def _load_model(self, src_dir, global_step = None):
         saver = tf.train.Saver()
-        saver.restore(self.sess, os.path.join(src_dir, 'model.ckpt'))
+        model = 'model.ckpt' if global_step == None else 'model-{0}.ckpt'.format(global_step)
+        saver.restore(self.sess, os.path.join(src_dir, model))
 
-    def _plot(self, x, y, prediction, color, save = False, id = 0, dst_dir = None):
+    def _plot(self, x, y, prediction, save = False, id = 0, dst_dir = None):
         x = x[0, ..., 0]
         y = y[0, ..., 0]
         prediction = prediction[0, ..., 0]
 
         fig, ax = plt.subplots(1, 10)
-        ax[0].imshow(x, vmin = 0, vmax = 1, aspect = 'auto', cmap = None if color else plt.cm.gray)
+        ax[0].imshow(x, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
         ax[1].imshow(y, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
         ax[2].imshow(prediction, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
         ax[3].imshow(prediction > 0.3, vmin = False, vmax = True, aspect = 'auto', cmap = plt.cm.gray)
@@ -218,6 +229,7 @@ class Wrapper(object):
 def init(
     data_src_dir,
     dataset_src_dir,
+    dst_dir,
     model_dst_dir,
     training_plot_dst_dir,
     test_plot_dst_dir,
@@ -227,15 +239,14 @@ def init(
     transformation,
     downsample_rate,
     samples_per_second,
-    multiplier,
-    color
+    multiplier
 ):
-    shutil.rmtree(model_dst_dir, ignore_errors = True)
-    shutil.rmtree(training_plot_dst_dir, ignore_errors = True)
-    shutil.rmtree(test_plot_dst_dir, ignore_errors = True)
+    # Remove previous run if it exists
+    shutil.rmtree(dst_dir, ignore_errors = True)
     # Without the delay sometimes weird shit happens when deleting/creating the folder
     time.sleep(1)
 
+    # Crate necessary folders
     os.makedirs(model_dst_dir)
     os.makedirs(training_plot_dst_dir)
     os.makedirs(test_plot_dst_dir)
@@ -252,8 +263,7 @@ def init(
         )
         preprocessor.preprocess(
             transformation = transformation,
-            duration_multiplier = multiplier,
-            color = color
+            duration_multiplier = multiplier
         )
 
     tf.reset_default_graph()
@@ -264,6 +274,7 @@ def init(
 def main(
     data_src_dir,
     dataset_src_dir,
+    dst_dir,
     model_dst_dir,
     training_plot_dst_dir,
     test_plot_dst_dir,
@@ -272,7 +283,6 @@ def main(
     downsample_rate,
     samples_per_second,
     multiplier,
-    color,
     input_suffix,
     output_suffix,
     batch_size,
@@ -282,6 +292,7 @@ def main(
     sess = init(
         data_src_dir,
         dataset_src_dir,
+        dst_dir,
         model_dst_dir,
         training_plot_dst_dir,
         test_plot_dst_dir,
@@ -291,8 +302,7 @@ def main(
         transformation,
         downsample_rate,
         samples_per_second,
-        multiplier,
-        color
+        multiplier
     )
 
     wrapper = Wrapper(
@@ -305,8 +315,8 @@ def main(
         num_epochs,
         weight
     )
-    wrapper.train(model_dst_dir, training_plot_dst_dir, test_plot_dst_dir, color)
-    wrapper.test(plot = True, plot_dest_dir = test_plot_dst_dir, color = color)
+    wrapper.train(dst_dir, model_dst_dir, training_plot_dst_dir, test_plot_dst_dir)
+    wrapper.test(plot = True, plot_dest_dir = test_plot_dst_dir)
 
 if __name__ == '__main__':
     conf = configparser.ConfigParser()
@@ -314,7 +324,6 @@ if __name__ == '__main__':
 
     # global conf
     global_conf = conf['global']
-    COLOR = global_conf.getboolean('color')
     DATASET = global_conf['dataset']
     DURATION_MULTIPLIER = int(global_conf['multiplier'])
     TRANSFORMATION = global_conf['transformation']
@@ -340,14 +349,15 @@ if __name__ == '__main__':
     DATASET_SRC_DIR = os.path.join('./data/preprocessed/', FULL_DATASET)
 
     MODEL_NAME = '{0}.{1}.dr-{2}.sps-{3}.dm-{4}.ne-{5}.bs-{6}.w-{7}'.format(DATASET, TRANSFORMATION, DOWNSAMPLE_RATE, SAMPLES_PER_SECOND, DURATION_MULTIPLIER, NUM_EPOCHS, BATCH_SIZE, WEIGHT)
-    RESULTS_DST_DIR = os.path.join('./results/', MODEL_NAME)
-    MODEL_DST_DIR = os.path.join(RESULTS_DST_DIR, 'unet')
-    TRAINING_PLOT_DST_DIR = os.path.join(RESULTS_DST_DIR, 'training-prediction')
-    TEST_PLOT_DST_DIR = os.path.join(RESULTS_DST_DIR, 'test-prediction')
+    DST_DIR = os.path.join('./results/', MODEL_NAME)
+    MODEL_DST_DIR = os.path.join(DST_DIR, 'unet')
+    TRAINING_PLOT_DST_DIR = os.path.join(DST_DIR, 'training-prediction')
+    TEST_PLOT_DST_DIR = os.path.join(DST_DIR, 'test-prediction')
 
     main(
         DATA_SRC_DIR,       # Raw
         DATASET_SRC_DIR,    # Processed
+        DST_DIR,
         MODEL_DST_DIR,
         TRAINING_PLOT_DST_DIR,
         TEST_PLOT_DST_DIR,
@@ -356,7 +366,6 @@ if __name__ == '__main__':
         DOWNSAMPLE_RATE,
         SAMPLES_PER_SECOND,
         DURATION_MULTIPLIER,
-        COLOR,   
         INPUT_SUFFIX,
         OUTPUT_SUFFIX,
         BATCH_SIZE,
