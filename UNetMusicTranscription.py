@@ -36,7 +36,8 @@ class Wrapper(object):
     ):
         self.sess = sess
 
-        self.training_dataset_size, self.test_dataset_size, self.training_dataset, self.test_dataset = self._get_datasets(
+        self.training_dataset_size, self.validation_dataset_size, self.test_dataset_size, \
+        self.training_dataset, self.validation_dataset, self.test_dataset = self._get_datasets(
             dataset_src_dir,
             image_format,
             input_suffix,
@@ -50,7 +51,7 @@ class Wrapper(object):
         self.training_handle = sess.run(self.training_dataset.make_one_shot_iterator().string_handle())
         self.test_handle = sess.run(self.test_dataset.make_one_shot_iterator().string_handle())
 
-        self.input, self.ground_truth = self.iterator.get_next()
+        self.input, self.ground_truth, self.file_name = self.iterator.get_next()
         self.is_training = tf.placeholder(dtype = bool, shape = ())
         self.model = UNetModel(
             self.input,
@@ -121,7 +122,8 @@ class Wrapper(object):
         total_cost = 0
         try:
             while True:
-                x, y = self.sess.run([self.model.input, self.model.ground_truth], feed_dict = { self.handle: self.test_handle })
+                x, y, file_name = self.sess.run([self.model.input, self.model.ground_truth, self.file_name], feed_dict = { self.handle: self.test_handle })
+                file_name = file_name[0].decode()
                 prediction, cost = self.sess.run(
                     [self.model.prediction, self.model.cost],
                     feed_dict = { self.is_training: False, self.input: x, self.handle: self.test_handle }
@@ -132,7 +134,7 @@ class Wrapper(object):
                 total_cost = total_cost + cost
 
                 if plot:
-                    self._plot(x, y, prediction, save = True, id = 'sample-{0}'.format(i), dst_dir = plot_dest_dir)
+                    self._plot(x, y, prediction, save = True, id = file_name, dst_dir = plot_dest_dir)
 
                 # one epoch
                 if samples == self.test_dataset_size:
@@ -145,7 +147,7 @@ class Wrapper(object):
 
     def _get_datasets(self, src_dir, format, input_suffix, output_suffix, batch_size = 1, num_epochs = None):
         def get_dataset(src_dir, format, input_suffix, output_suffix, bach_size, num_epochs = None):
-            def parse_files(input_file, output_file):
+            def parse_files(input_file, output_file, file_name):
                 def parse_file(file, channels):
                     img_string = tf.read_file(file)
                     img = tf.image.decode_png(img_string, channels = channels, dtype = tf.uint8)
@@ -153,11 +155,12 @@ class Wrapper(object):
                     return img
 
                 channels = 1
-                return parse_file(input_file, channels), parse_file(output_file, channels)
+                return parse_file(input_file, channels), parse_file(output_file, channels), file_name
 
             def get_input_output_files(src_dir, format, input_suffix, output_suffix):
                 input_files = []
                 output_files = []
+                file_names = []
                 for file in os.listdir(src_dir):
                     file_name, file_extension = os.path.splitext(file)
                     if file_extension != format:
@@ -165,18 +168,18 @@ class Wrapper(object):
                     if not file_name.endswith(input_suffix):
                         continue
 
-                    input_file_name = file_name
+                    file_name_without_suffix = os.path.splitext(file_name)[0]
                     input_file = file
-                    output_file_name = os.path.splitext(file_name)[0] + output_suffix
-                    output_file = output_file_name + file_extension
+                    output_file = file_name_without_suffix + output_suffix + file_extension
                     if os.path.isfile(os.path.join(src_dir, output_file)):
                         input_files.append(os.path.join(src_dir, input_file))
                         output_files.append(os.path.join(src_dir, output_file))
-                return input_files, output_files
+                        file_names.append(file_name_without_suffix)
+                return input_files, output_files, file_names
 
-            input_files, output_files = get_input_output_files(src_dir, format, input_suffix, output_suffix)
+            input_files, output_files, file_names = get_input_output_files(src_dir, format, input_suffix, output_suffix)
             dataset = tf.data.Dataset \
-                      .from_tensor_slices((input_files, output_files)) \
+                      .from_tensor_slices((input_files, output_files, file_names)) \
                       .map(parse_files) \
                       .batch(bach_size) \
                       .shuffle(20) \
@@ -192,6 +195,13 @@ class Wrapper(object):
             batch_size,
             num_epochs = num_epochs
         )
+        validation_dataset_size, validation_dataset = get_dataset(
+            os.path.join(src_dir, 'validation'),
+            format,
+            input_suffix,
+            output_suffix,
+            1
+        )
         test_dataset_size, test_dataset = get_dataset(
             os.path.join(src_dir, 'test'),
             format,
@@ -199,7 +209,7 @@ class Wrapper(object):
             output_suffix,
             1
         )
-        return training_dataset_size, test_dataset_size, training_dataset, test_dataset
+        return training_dataset_size, validation_dataset_size, test_dataset_size, training_dataset, validation_dataset, test_dataset
 
     def _save_model(self, dst_dir, global_step = None):
         saver = tf.train.Saver()
