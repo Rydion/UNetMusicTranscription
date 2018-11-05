@@ -1,7 +1,7 @@
 '''
 author: Adrian Hintze
 '''
-import traceback
+
 import os
 import time
 import shutil
@@ -113,7 +113,6 @@ class Wrapper(object):
                     samples = 0
                     epoch_cost = 0
 
-
         except tf.errors.OutOfRangeError:
             pass
         finally:
@@ -139,18 +138,14 @@ class Wrapper(object):
                 if plot:
                     self._plot(x, y, prediction, save = True, id = file_name, dst_dir = plot_dest_dir)
                 if save:
-                    try:
-                        prediction = prediction[0, ..., 0]
-                        prediction = self._threshold_probability(prediction)
-                        prediction = self._onset_offset_detection(prediction)
-                        print([np.amin(prediction), np.amax(prediction)])
-                        prediction = (prediction*255).astype(np.uint8)
-                        img = Image.fromarray(prediction, 'L')
-                        dst_file = os.path.join(plot_dest_dir, '{0}{1}'.format(file_name, self._img_format))
-                        print(dst_file)
-                        img.save(dst_file)
-                    except Exception:
-                        traceback.print_exc()
+                    prediction = prediction[0, ..., 0]
+                    prediction = self._threshold_probability(prediction)
+                    prediction = self._onset_offset_detection(prediction)
+                    prediction = (prediction*255).astype(np.uint8)
+                    img = Image.fromarray(prediction, 'L')
+                    dst_file = os.path.join(plot_dest_dir, '{0}{1}'.format(file_name, self._img_format))
+                    print(dst_file)
+                    img.save(dst_file)
 
                 # one epoch
                 if samples == self.test_dataset_size:
