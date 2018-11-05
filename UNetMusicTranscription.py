@@ -1,7 +1,7 @@
 '''
 author: Adrian Hintze
 '''
-
+import traceback
 import os
 import time
 import shutil
@@ -14,8 +14,10 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
+from PIL import Image
 from unet.Unet import UNetModel
 from utils.Preprocessor import Preprocessor
+from utils.functions import collapse_array
 
 # Remove unnecessary tensorflow verbosity
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
@@ -26,7 +28,7 @@ class Wrapper(object):
         sess,
         dataset_src_dir,
         model_src_dir,
-        image_format,
+        img_format,
         input_suffix,
         output_suffix,
         batch_size,
@@ -35,11 +37,12 @@ class Wrapper(object):
         state = None
     ):
         self.sess = sess
+        self._img_format = img_format
 
         self.training_dataset_size, self.validation_dataset_size, self.test_dataset_size, \
         self.training_dataset, self.validation_dataset, self.test_dataset = self._get_datasets(
             dataset_src_dir,
-            image_format,
+            self._img_format,
             input_suffix,
             output_suffix,
             batch_size = batch_size,
@@ -116,7 +119,7 @@ class Wrapper(object):
         finally:
             self._save_model(model_dst_dir)
 
-    def test(self, plot = False, plot_dest_dir = None):
+    def test(self, plot = False, save = False, plot_dest_dir = None):
         i = 0
         samples = 0
         total_cost = 0
@@ -135,6 +138,19 @@ class Wrapper(object):
 
                 if plot:
                     self._plot(x, y, prediction, save = True, id = file_name, dst_dir = plot_dest_dir)
+                if save:
+                    try:
+                        prediction = prediction[0, ..., 0]
+                        prediction = self._threshold_probability(prediction)
+                        prediction = self._onset_offset_detection(prediction)
+                        print([np.amin(prediction), np.amax(prediction)])
+                        prediction = (prediction*255).astype(np.uint8)
+                        img = Image.fromarray(prediction, 'L')
+                        dst_file = os.path.join(plot_dest_dir, '{0}{1}'.format(file_name, self._img_format))
+                        print(dst_file)
+                        img.save(dst_file)
+                    except Exception:
+                        traceback.print_exc()
 
                 # one epoch
                 if samples == self.test_dataset_size:
@@ -144,6 +160,13 @@ class Wrapper(object):
             pass
         finally:
             return total_cost/i
+
+    def _threshold_probability(self, x):
+        x = x > 0.8
+        return x.astype(np.float32)
+
+    def _onset_offset_detection(self, x):
+        return collapse_array(x, (96, 128), 3, 0)
 
     def _get_datasets(self, src_dir, format, input_suffix, output_suffix, batch_size = 1, num_epochs = None):
         def get_dataset(src_dir, format, input_suffix, output_suffix, bach_size, num_epochs = None):
@@ -306,6 +329,7 @@ def main(
     samples_per_second,
     multiplier,
     load,
+    train,
     batch_size,
     num_epochs,
     weight
@@ -343,8 +367,10 @@ def main(
         weight,
         state = state
     )
-    wrapper.train(dst_dir, model_dst_dir, training_plot_dst_dir, test_plot_dst_dir)
-    wrapper.test(plot = True, plot_dest_dir = test_plot_dst_dir)
+    if train:
+        wrapper.train(dst_dir, model_dst_dir, training_plot_dst_dir, test_plot_dst_dir)
+    #wrapper.test(plot = True, plot_dest_dir = test_plot_dst_dir)
+    wrapper.test(save = True, plot_dest_dir = test_plot_dst_dir)
 
 if __name__ == '__main__':
     conf = configparser.ConfigParser()
@@ -367,6 +393,9 @@ if __name__ == '__main__':
     # training conf
     training_conf = conf['training']
     LOAD = training_conf.getboolean('load')
+    TRAIN = training_conf.getboolean('train')
+    if not TRAIN:
+        LOAD = True
     BATCH_SIZE = int(training_conf['batch'])
     NUM_EPOCHS = int(training_conf['epochs'])
     WEIGHT = int(training_conf['weight'])
@@ -398,6 +427,7 @@ if __name__ == '__main__':
         SAMPLES_PER_SECOND,
         DURATION_MULTIPLIER,
         LOAD,
+        TRAIN,
         BATCH_SIZE,
         NUM_EPOCHS,
         WEIGHT

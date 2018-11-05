@@ -149,10 +149,6 @@ class Preprocessor:
                 break
 
             slice_length = np.shape(c)[1]
-
-            final_length = 64
-            c = expand_array(c, (np.shape(c)[0], final_length), final_length//np.shape(c)[1], 1)
-
             c = (c*255).astype(np.uint8)
             img = Image.fromarray(c, 'L').rotate(180)
 

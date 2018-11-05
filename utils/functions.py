@@ -35,3 +35,19 @@ def expand_array(arr, size, pixel_mult, dim):
             else:
                 result[:, i*pixel_mult + j] = arr[:, i]
     return result
+
+def collapse_array(arr, size, pixel_div, dim):
+    orig_size = np.shape(arr)
+    if orig_size[dim] <= size[dim]:
+        return arr
+
+    result = np.zeros(size)
+    i = 0
+    for i in range(size[dim]):
+        for j in range(pixel_div):
+            if dim == 0:
+                result[i, :] = result[i, :] + arr[i*pixel_div + j, :]
+            else:
+                result[:, i] = result[:, i] + arr[:, i*pixel_div + j]
+        result[i, :] = result[i, :]//pixel_div
+    return result
