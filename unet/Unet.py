@@ -42,9 +42,9 @@ def sigmoid_xentropy(logits, targets, weight):
     return tf.reduce_mean(ce)
 
 class UNetModel(object):
-    def __init__(self, input, ground_truth, is_training, weight):
+    def __init__(self, input, output, is_training, weight):
         self.input = input
-        self.ground_truth = ground_truth
+        self.output = output
         self.is_training = is_training
         self._weight = weight
         self._optimizer = tf.train.AdamOptimizer(
@@ -60,7 +60,7 @@ class UNetModel(object):
         )
 
         self.prediction = self.unet.output
-        self.cost = sigmoid_xentropy(self.prediction, self.ground_truth, self._weight)
+        self.cost = sigmoid_xentropy(self.prediction, self.output, self._weight)
       
         self.train_op = self._optimizer.minimize(self.cost)
 

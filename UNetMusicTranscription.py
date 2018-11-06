@@ -31,6 +31,7 @@ class Wrapper(object):
         img_format,
         input_suffix,
         output_suffix,
+        gt_suffix,
         batch_size,
         num_epochs,
         weight,
@@ -45,6 +46,7 @@ class Wrapper(object):
             self._img_format,
             input_suffix,
             output_suffix,
+            gt_suffix,
             batch_size = batch_size,
             num_epochs = num_epochs
         )
@@ -54,11 +56,11 @@ class Wrapper(object):
         self.training_handle = sess.run(self.training_dataset.make_one_shot_iterator().string_handle())
         self.test_handle = sess.run(self.test_dataset.make_one_shot_iterator().string_handle())
 
-        self.input, self.ground_truth, self.file_name = self.iterator.get_next()
+        self.input, self.output, self.ground_truth, self.file_name = self.iterator.get_next()
         self.is_training = tf.placeholder(dtype = bool, shape = ())
         self.model = UNetModel(
             self.input,
-            self.ground_truth,
+            self.output,
             self.is_training,
             weight
         )
@@ -80,7 +82,7 @@ class Wrapper(object):
         try:
             while True:
                 x, y, prediction, cost, _ = self.sess.run(
-                    [self.input, self.ground_truth, self.model.prediction, self.model.cost, self.model.train_op],
+                    [self.input, self.output, self.model.prediction, self.model.cost, self.model.train_op],
                     feed_dict = { self.is_training: True, self.handle: self.training_handle }
                 )
 
@@ -124,7 +126,10 @@ class Wrapper(object):
         total_cost = 0
         try:
             while True:
-                x, y, file_name = self.sess.run([self.model.input, self.model.ground_truth, self.file_name], feed_dict = { self.handle: self.test_handle })
+                x, y, gt, file_name = self.sess.run(
+                    [self.input, self.output, self.ground_truth, self.file_name],
+                    feed_dict = { self.handle: self.test_handle }
+                )
                 file_name = file_name[0].decode()
                 prediction, cost = self.sess.run(
                     [self.model.prediction, self.model.cost],
@@ -144,28 +149,25 @@ class Wrapper(object):
                     prediction = (prediction*255).astype(np.uint8)
                     img = Image.fromarray(prediction, 'L')
                     dst_file = os.path.join(plot_dest_dir, '{0}{1}'.format(file_name, self._img_format))
-                    print(dst_file)
                     img.save(dst_file)
 
                 # one epoch
                 if samples == self.test_dataset_size:
                     break
-
         except tf.errors.OutOfRangeError:
             pass
         finally:
             return total_cost/i
 
-    def _threshold_probability(self, x):
-        x = x > 0.8
-        return x.astype(np.float32)
+    def _threshold_probability(self, x, p = 0.8):
+        return (x > p).astype(x.dtype)
 
     def _onset_offset_detection(self, x):
-        return collapse_array(x, (96, 128), 3, 0)
+        return collapse_array(x, (96, np.shape(x)[1]), np.shape(x)[1]//96, 0)
 
-    def _get_datasets(self, src_dir, format, input_suffix, output_suffix, batch_size = 1, num_epochs = None):
-        def get_dataset(src_dir, format, input_suffix, output_suffix, bach_size, num_epochs = None):
-            def parse_files(input_file, output_file, file_name):
+    def _get_datasets(self, src_dir, format, input_suffix, output_suffix, gt_suffix, batch_size = 1, num_epochs = None):
+        def get_dataset(src_dir, format, input_suffix, output_suffix, gt_suffix, bach_size, num_epochs = None):
+            def parse_files(input_file, output_file, gt_file, file_name):
                 def parse_file(file, channels):
                     img_string = tf.read_file(file)
                     img = tf.image.decode_png(img_string, channels = channels, dtype = tf.uint8)
@@ -173,11 +175,12 @@ class Wrapper(object):
                     return img
 
                 channels = 1
-                return parse_file(input_file, channels), parse_file(output_file, channels), file_name
+                return parse_file(input_file, channels), parse_file(output_file, channels), parse_file(gt_file, channels), file_name
 
-            def get_input_output_files(src_dir, format, input_suffix, output_suffix):
+            def get_input_output_files(src_dir, format, input_suffix, output_suffix, gt_suffix):
                 input_files = []
                 output_files = []
+                gt_files = []
                 file_names = []
                 for file in os.listdir(src_dir):
                     file_name, file_extension = os.path.splitext(file)
@@ -189,15 +192,20 @@ class Wrapper(object):
                     file_name_without_suffix = os.path.splitext(file_name)[0]
                     input_file = file
                     output_file = file_name_without_suffix + output_suffix + file_extension
-                    if os.path.isfile(os.path.join(src_dir, output_file)):
-                        input_files.append(os.path.join(src_dir, input_file))
-                        output_files.append(os.path.join(src_dir, output_file))
+                    gt_file = file_name_without_suffix + gt_suffix + file_extension
+                    input_file_path = os.path.join(src_dir, input_file)
+                    output_file_path = os.path.join(src_dir, output_file)
+                    gt_file_path = os.path.join(src_dir, gt_file)
+                    if os.path.isfile(output_file_path) and os.path.isfile(gt_file_path):
+                        input_files.append(input_file_path)
+                        output_files.append(output_file_path)
+                        gt_files.append(gt_file_path)
                         file_names.append(file_name_without_suffix)
-                return input_files, output_files, file_names
+                return input_files, output_files, gt_files, file_names
 
-            input_files, output_files, file_names = get_input_output_files(src_dir, format, input_suffix, output_suffix)
+            input_files, output_files, gt_files, file_names = get_input_output_files(src_dir, format, input_suffix, output_suffix, gt_suffix)
             dataset = tf.data.Dataset \
-                      .from_tensor_slices((input_files, output_files, file_names)) \
+                      .from_tensor_slices((input_files, output_files, gt_files, file_names)) \
                       .map(parse_files) \
                       .batch(bach_size) \
                       .shuffle(20) \
@@ -210,6 +218,7 @@ class Wrapper(object):
             format,
             input_suffix,
             output_suffix,
+            gt_suffix,
             batch_size,
             num_epochs = num_epochs
         )
@@ -218,6 +227,7 @@ class Wrapper(object):
             format,
             input_suffix,
             output_suffix,
+            gt_suffix,
             1
         )
         test_dataset_size, test_dataset = get_dataset(
@@ -225,6 +235,7 @@ class Wrapper(object):
             format,
             input_suffix,
             output_suffix,
+            gt_suffix,
             1
         )
         return training_dataset_size, validation_dataset_size, test_dataset_size, training_dataset, validation_dataset, test_dataset
@@ -272,6 +283,7 @@ def init(
     img_format,
     input_suffix,
     output_suffix,
+    gt_suffix,
     transformation,
     downsample_rate,
     samples_per_second,
@@ -296,6 +308,7 @@ def init(
                 img_format,
                 input_suffix,
                 output_suffix,
+                gt_suffix,
                 downsample_rate,
                 samples_per_second
             )
@@ -319,6 +332,7 @@ def main(
     img_format,
     input_suffix,
     output_suffix,
+    gt_suffix,
     transformation,
     downsample_rate,
     samples_per_second,
@@ -339,6 +353,7 @@ def main(
         img_format,
         input_suffix,
         output_suffix,
+        gt_suffix,
         transformation,
         downsample_rate,
         samples_per_second,
@@ -357,6 +372,7 @@ def main(
         img_format,
         input_suffix,
         output_suffix,
+        gt_suffix,
         batch_size,
         num_epochs,
         weight,
@@ -379,6 +395,7 @@ if __name__ == '__main__':
     IMG_FORMAT = global_conf['format']
     INPUT_SUFFIX = global_conf['input_suffix']
     OUTPUT_SUFFIX = global_conf['output_suffix']
+    GT_SUFFIX = global_conf['gt_suffix']
 
     # preprocessing conf
     process_conf = conf['processing']
@@ -417,6 +434,7 @@ if __name__ == '__main__':
         IMG_FORMAT,
         INPUT_SUFFIX,
         OUTPUT_SUFFIX,
+        GT_SUFFIX,
         TRANSFORMATION,
         DOWNSAMPLE_RATE,
         SAMPLES_PER_SECOND,

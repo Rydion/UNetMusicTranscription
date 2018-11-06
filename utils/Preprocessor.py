@@ -31,7 +31,7 @@ class Preprocessor:
         true_len = num + remainder
         return true_len//dem
 
-    def __init__(self, src_dir, dst_dir, img_format, input_suffix, output_suffix, downsample_rate, samples_per_second):
+    def __init__(self, src_dir, dst_dir, img_format, input_suffix, output_suffix, gt_suffix, downsample_rate, samples_per_second):
         self.src_dir = src_dir
         self.dst_dir = dst_dir
         self.training_dst_dir = os.path.join(self.dst_dir, 'training')
@@ -40,6 +40,7 @@ class Preprocessor:
         self.img_format = img_format
         self._input_suffix = input_suffix
         self._output_suffix = output_suffix
+        self._gt_suffix = gt_suffix
         self._downsample_rate = downsample_rate
         self._samples_per_second = samples_per_second
 
@@ -47,9 +48,8 @@ class Preprocessor:
         self._cqt_stride = self._downsample_rate//self._samples_per_second
         self._stft_window_length = 1024
         self._stft_stride = self._stft_window_length//2
-        self._gt_suffix = '.gt'
 
-    def preprocess(self, gen_input = True, gen_output = True, transformation = 'stft', duration_multiplier = 1):
+    def preprocess(self, gen_input = True, gen_output = True, transformation = 'cqt', duration_multiplier = 1):
         self._delete_dst_dir()
         self._create_dst_dirs()
 

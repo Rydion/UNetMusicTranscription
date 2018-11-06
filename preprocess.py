@@ -13,6 +13,7 @@ def main(
     img_format,
     input_suffix,
     output_suffix,
+    gt_suffix,
     transformation,
     downsample_rate,
     samples_per_second,
@@ -24,6 +25,7 @@ def main(
         img_format,
         input_suffix,
         output_suffix,
+        gt_suffix,
         downsample_rate,
         samples_per_second
     )
@@ -48,6 +50,7 @@ if __name__ == '__main__':
     IMG_FORMAT = global_conf['format']
     INPUT_SUFFIX = global_conf['input_suffix']
     OUTPUT_SUFFIX = global_conf['output_suffix']
+    GT_SUFFIX = global_conf['gt_suffix']
 
     # preprocessing conf
     process_conf = conf['processing']
@@ -68,6 +71,7 @@ if __name__ == '__main__':
         IMG_FORMAT,
         INPUT_SUFFIX,
         OUTPUT_SUFFIX,
+        GT_SUFFIX,
         TRANSFORMATION,
         DOWNSAMPLE_RATE,
         SAMPLES_PER_SECOND,
