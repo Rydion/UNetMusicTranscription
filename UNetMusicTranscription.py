@@ -39,6 +39,7 @@ class Wrapper(object):
     ):
         self.sess = sess
         self._img_format = img_format
+        self._num_epochs = num_epochs
 
         self.training_dataset_size, self.validation_dataset_size, self.test_dataset_size, \
         self.training_dataset, self.validation_dataset, self.test_dataset = self._get_datasets(
@@ -47,8 +48,7 @@ class Wrapper(object):
             input_suffix,
             output_suffix,
             gt_suffix,
-            batch_size = batch_size,
-            num_epochs = num_epochs
+            batch_size = batch_size
         )
 
         self.handle = tf.placeholder(tf.string, shape = [])
@@ -79,46 +79,45 @@ class Wrapper(object):
         i = 0
         samples = 0
         epoch_cost = 0
-        try:
-            while True:
-                x, y, prediction, cost, _ = self.sess.run(
-                    [self.input, self.output, self.model.prediction, self.model.cost, self.model.train_op],
-                    feed_dict = { self.is_training: True, self.handle: self.training_handle }
-                )
+        while True:
+            if self._state['epoch'] >= self._num_epochs:
+                break
 
-                i = i + 1
-                samples = samples + np.shape(x)[0]
-                epoch_cost = epoch_cost + cost
+            x, y, prediction, cost, _ = self.sess.run(
+                [self.input, self.output, self.model.prediction, self.model.cost, self.model.train_op],
+                feed_dict = { self.is_training: True, self.handle: self.training_handle }
+            )
 
-                # each epoch
-                if samples == self.training_dataset_size:
-                    self._state['epoch'] = self._state['epoch'] + 1
+            i = i + 1
+            samples = samples + np.shape(x)[0]
+            epoch_cost = epoch_cost + cost
 
-                    self._save_model(model_dst_dir, global_step = self._state['epoch'])
-                    self._plot(x, y, prediction, save = True, id = 'epoch-{0}'.format(self._state['epoch']), dst_dir = training_plot_dst_dir)
+            # each epoch
+            if samples == self.training_dataset_size:
+                self._state['epoch'] = self._state['epoch'] + 1
 
-                    training_error = epoch_cost/i
+                self._save_model(model_dst_dir, global_step = self._state['epoch'])
+                self._plot(x, y, prediction, save = True, id = 'epoch-{0}'.format(self._state['epoch']), dst_dir = training_plot_dst_dir)
 
-                    epoch_test_plot_dst_dir =  os.path.join(test_plot_dst_dir, str(self._state['epoch']))
-                    if not os.path.exists(epoch_test_plot_dst_dir):
-                        os.makedirs(epoch_test_plot_dst_dir)
-                    test_error = self.test(plot = True, plot_dest_dir = epoch_test_plot_dst_dir)
+                training_error = epoch_cost/i
 
-                    # Update results and save
-                    self._state['cost'].append((training_error, test_error))
-                    with open(os.path.join(dst_dir, 'results.pkl'), 'wb') as f:
-                        pickle.dump(self._state, f, pickle.HIGHEST_PROTOCOL)
+                epoch_test_plot_dst_dir =  os.path.join(test_plot_dst_dir, str(self._state['epoch']))
+                if not os.path.exists(epoch_test_plot_dst_dir):
+                    os.makedirs(epoch_test_plot_dst_dir)
+                test_error = self.test(plot = True, plot_dest_dir = epoch_test_plot_dst_dir)
 
-                    print('Epoch {0} finished. Training error: {1}. Test error: {2}'.format(self._state['epoch'], training_error, test_error))
+                # Update results and save
+                self._state['cost'].append((training_error, test_error))
+                with open(os.path.join(dst_dir, 'results.pkl'), 'wb') as f:
+                    pickle.dump(self._state, f, pickle.HIGHEST_PROTOCOL)
 
-                    i = 0
-                    samples = 0
-                    epoch_cost = 0
+                print('Epoch {0} finished. Training error: {1}. Test error: {2}'.format(self._state['epoch'], training_error, test_error))
 
-        except tf.errors.OutOfRangeError:
-            pass
-        finally:
-            self._save_model(model_dst_dir)
+                i = 0
+                samples = 0
+                epoch_cost = 0
+
+        self._save_model(model_dst_dir)
 
     def test(self, plot = False, save = False, plot_dest_dir = None):
         i = 0
@@ -165,8 +164,8 @@ class Wrapper(object):
     def _onset_offset_detection(self, x):
         return collapse_array(x, (96, np.shape(x)[1]), np.shape(x)[1]//96, 0)
 
-    def _get_datasets(self, src_dir, format, input_suffix, output_suffix, gt_suffix, batch_size = 1, num_epochs = None):
-        def get_dataset(src_dir, format, input_suffix, output_suffix, gt_suffix, bach_size, num_epochs = None):
+    def _get_datasets(self, src_dir, format, input_suffix, output_suffix, gt_suffix, batch_size = 1):
+        def get_dataset(src_dir, format, input_suffix, output_suffix, gt_suffix, bach_size):
             def parse_files(input_file, output_file, gt_file, file_name):
                 def parse_file(file, channels):
                     img_string = tf.read_file(file)
@@ -209,7 +208,7 @@ class Wrapper(object):
                       .map(parse_files) \
                       .batch(bach_size) \
                       .shuffle(20) \
-                      .repeat(num_epochs)
+                      .repeat()
 
             return len(input_files), dataset
 
@@ -219,8 +218,7 @@ class Wrapper(object):
             input_suffix,
             output_suffix,
             gt_suffix,
-            batch_size,
-            num_epochs = num_epochs
+            batch_size
         )
         validation_dataset_size, validation_dataset = get_dataset(
             os.path.join(src_dir, 'validation'),
