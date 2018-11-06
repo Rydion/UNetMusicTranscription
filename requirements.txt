@@ -4,4 +4,4 @@ matplotlib==2.2.3
 pypianoroll==0.4.6
 librosa==0.6.2
 Pillow==5.2.0
-madmom
+madmom==0.15.1

@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
 from PIL import Image
+from madmom.evaluation.notes import NoteEvaluation
 from unet.Unet import UNetModel
 from utils.Preprocessor import Preprocessor
 from utils.functions import collapse_array
@@ -123,40 +124,45 @@ class Wrapper(object):
         i = 0
         samples = 0
         total_cost = 0
-        try:
-            while True:
-                x, y, gt, file_name = self.sess.run(
-                    [self.input, self.output, self.ground_truth, self.file_name],
-                    feed_dict = { self.handle: self.test_handle }
-                )
-                file_name = file_name[0].decode()
-                prediction, cost = self.sess.run(
-                    [self.model.prediction, self.model.cost],
-                    feed_dict = { self.is_training: False, self.input: x, self.handle: self.test_handle }
-                )
+        while True:
+            x, y, gt, file_name = self.sess.run(
+                [self.input, self.output, self.ground_truth, self.file_name],
+                feed_dict = { self.handle: self.test_handle }
+            )
+            file_name = file_name[0].decode()
+            prediction, cost = self.sess.run(
+                [self.model.prediction, self.model.cost],
+                feed_dict = { self.is_training: False, self.input: x, self.handle: self.test_handle }
+            )
 
-                i = i + 1
-                samples = samples + np.shape(x)[0]
-                total_cost = total_cost + cost
+            i = i + 1
+            samples = samples + np.shape(x)[0]
+            total_cost = total_cost + cost
 
-                if plot:
-                    self._plot(x, y, prediction, save = True, id = file_name, dst_dir = plot_dest_dir)
-                if save:
-                    prediction = prediction[0, ..., 0]
-                    prediction = self._threshold_probability(prediction)
-                    prediction = self._onset_offset_detection(prediction)
-                    prediction = (prediction*255).astype(np.uint8)
-                    img = Image.fromarray(prediction, 'L')
-                    dst_file = os.path.join(plot_dest_dir, '{0}{1}'.format(file_name, self._img_format))
-                    img.save(dst_file)
+            if plot:
+                self._plot(x, y, prediction, save = True, id = file_name, dst_dir = plot_dest_dir)
+            if save:
+                prediction = prediction[0, ..., 0]
+                prediction = self._threshold_probability(prediction)
+                predicted_gt_float = self._onset_offset_detection(prediction)
+                predicted_gt = (predicted_gt_float*255).astype(np.uint8)
+                img = Image.fromarray(predicted_gt, 'L')
+                dst_file = os.path.join(plot_dest_dir, '{0}{1}'.format(file_name, self._img_format))
+                img.save(dst_file)
+                gt = gt[0, ..., 0]
+                test1 = (predicted_gt_float).astype(np.uint8)
+                test2 = (gt).astype(np.uint8)
+                #test1 = np.transpose(test1)
+                #test2 = np.transpose(test2)
+                print([np.shape(test1), np.shape(test2)])
+                eval = NoteEvaluation(test1, test2)
+                print(eval.tostring())
 
-                # one epoch
-                if samples == self.test_dataset_size:
-                    break
-        except tf.errors.OutOfRangeError:
-            pass
-        finally:
-            return total_cost/i
+            # one epoch
+            if samples == self.test_dataset_size:
+                break
+
+        return total_cost/i
 
     def _threshold_probability(self, x, p = 0.8):
         return (x > p).astype(x.dtype)
