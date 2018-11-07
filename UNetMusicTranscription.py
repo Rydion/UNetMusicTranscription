@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
 from PIL import Image
-from madmom.evaluation.notes import NoteEvaluation
+from madmom.evaluation.notes import NoteEvaluation, NoteMeanEvaluation
 from unet.Unet import UNetModel
 from utils.Preprocessor import Preprocessor
 from utils.functions import collapse_array
@@ -39,6 +39,7 @@ class Wrapper(object):
         batch_size,
         num_epochs,
         weight,
+        kernel_size,
         state = None
     ):
         self.sess = sess
@@ -66,13 +67,14 @@ class Wrapper(object):
             self.input,
             self.output,
             self.is_training,
-            weight
+            weight,
+            kernel_size
         )
 
         if state == None:
             self._state = {
                 'epoch': 0,
-                'cost': []
+                'cost': [(0, 0)] # Add an initial element to make the array start at 1 as we will start at epoch 1
             }
             sess.run(tf.global_variables_initializer())
         else:
@@ -108,10 +110,13 @@ class Wrapper(object):
                 epoch_test_plot_dst_dir =  os.path.join(test_plot_dst_dir, str(self._state['epoch']))
                 if not os.path.exists(epoch_test_plot_dst_dir):
                     os.makedirs(epoch_test_plot_dst_dir)
-                test_error = self.test(plot = True, plot_dest_dir = epoch_test_plot_dst_dir)
+                test_error, _ = self.test(plot = True, plot_dest_dir = epoch_test_plot_dst_dir)
 
                 # Update results and save
-                self._state['cost'].append((training_error, test_error))
+                if len(self._state['cost']) == self._state['epoch']:
+                    self._state['cost'].append((training_error, test_error))
+                else:
+                    self._state['cost'][self._state['epoch']] = (training_error, test_error)
                 with open(os.path.join(dst_dir, 'results.pkl'), 'wb') as f:
                     pickle.dump(self._state, f, pickle.HIGHEST_PROTOCOL)
 
@@ -127,6 +132,7 @@ class Wrapper(object):
         i = 0
         samples = 0
         total_cost = 0
+        evaluations = []
         while True:
             x, y, gt, file_name = self.sess.run(
                 [self.input, self.output, self.ground_truth, self.file_name],
@@ -156,33 +162,34 @@ class Wrapper(object):
                 gt = gt[0, ..., 0]
                 test1 = (predicted_gt_float).astype(np.uint8)
                 test2 = (gt).astype(np.uint8)
-
-                def format(pianoroll, sample_length = 0.0078125):
-                    result = []
-                    for i in range(np.shape(pianoroll)[0]):
-                        note_on = False
-                        for j in range(np.shape(pianoroll)[1]):
-                            if pianoroll[i, j] == 1:
-                                if note_on:
-                                    result[-1][2] = result[-1][2] + sample_length
-                                    continue
-
-                                note_on = True
-                                result.append([sample_length*j, i, sample_length, 127])
-                            else:
-                                note_on = False
-                    return result
-                test1 = format(test1)
-                test2 = format(test2)
-
-                eval = NoteEvaluation(test1, test2)
-                print(eval.tostring())
+                evaluations.append(self._evaluate_note_onset(test1, test2))
 
             # one epoch
             if samples == self.test_dataset_size:
                 break
 
-        return total_cost/i
+        return total_cost/i, NoteMeanEvaluation(evaluations)
+
+    def _evaluate_note_onset(self, predicted_gt, gt):
+        def format(pianoroll, sample_length = 0.0078125):
+            result = []
+            for i in range(np.shape(pianoroll)[0]):
+                note_on = False
+                for j in range(np.shape(pianoroll)[1]):
+                    if pianoroll[i, j] == 1:
+                        if note_on:
+                            result[-1][2] = result[-1][2] + sample_length
+                            continue
+
+                        note_on = True
+                        result.append([sample_length*j, i, sample_length, 127])
+                    else:
+                        note_on = False
+            return result
+        predicted_gt_onsets = format(predicted_gt)
+        gt_onsets = format(gt)
+
+        return NoteEvaluation(predicted_gt_onsets, gt_onsets)
 
     def _threshold_probability(self, x, p = 0.8):
         return (x > p).astype(x.dtype)
@@ -365,7 +372,8 @@ def main(
     train,
     batch_size,
     num_epochs,
-    weight
+    weight,
+    kernel_size
 ):
     sess = init(
         data_src_dir,
@@ -389,6 +397,7 @@ def main(
     if load:
         with open(os.path.join(dst_dir, 'results.pkl'), 'rb') as f:
             state = pickle.load(f)
+            print(state)
     wrapper = Wrapper(
         sess,
         dataset_src_dir,
@@ -400,12 +409,67 @@ def main(
         batch_size,
         num_epochs,
         weight,
+        kernel_size,
         state = state
     )
+
     if train:
         wrapper.train(dst_dir, model_dst_dir, training_plot_dst_dir, test_plot_dst_dir)
-    #wrapper.test(plot = True, plot_dest_dir = test_plot_dst_dir)
-    wrapper.test(save = True, plot_dest_dir = test_plot_dst_dir)
+    test_cost, eval = wrapper.test(save = True, plot_dest_dir = test_plot_dst_dir)
+
+    sess.close()
+
+    return test_cost, eval
+
+def grid_search(
+    data_src_dir,
+    dataset_src_dir,
+    dst_dir,
+    model_dst_dir,
+    training_plot_dst_dir,
+    test_plot_dst_dir,
+    img_format,
+    input_suffix,
+    output_suffix,
+    gt_suffix,
+    transformation,
+    downsample_rate,
+    samples_per_second,
+    multiplier,
+    load,
+    train,
+    batch_size,
+    num_epochs,
+    weight,
+    kernel_sizes = [(5, 5)]
+):
+    i = 0
+    for ks in kernel_sizes:
+        print('Grid Search Iteration {0}: ks {1}'.format(i, ks))
+        test_cost, eval = main(
+            data_src_dir,
+            dataset_src_dir,
+            dst_dir,
+            model_dst_dir,
+            training_plot_dst_dir,
+            test_plot_dst_dir,
+            img_format,
+            input_suffix,
+            output_suffix,
+            gt_suffix,
+            transformation,
+            downsample_rate,
+            samples_per_second,
+            multiplier,
+            load,
+            train,
+            batch_size,
+            num_epochs,
+            weight,
+            ks
+        )
+        print([test_cost, eval.tostring()])
+        i = i + 1
 
 if __name__ == '__main__':
     conf = configparser.ConfigParser()
@@ -448,7 +512,7 @@ if __name__ == '__main__':
     TRAINING_PLOT_DST_DIR = os.path.join(DST_DIR, 'training-prediction')
     TEST_PLOT_DST_DIR = os.path.join(DST_DIR, 'test-prediction')
 
-    main(
+    grid_search(
         DATA_SRC_DIR,       # Raw
         DATASET_SRC_DIR,    # Processed
         DST_DIR,
@@ -467,5 +531,6 @@ if __name__ == '__main__':
         TRAIN,
         BATCH_SIZE,
         NUM_EPOCHS,
-        WEIGHT
+        WEIGHT,
+        kernel_sizes = [(5, 5), (5, 9)]
     )

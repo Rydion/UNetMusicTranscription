@@ -42,7 +42,7 @@ def sigmoid_xentropy(logits, targets, weight):
     return tf.reduce_mean(ce)
 
 class UNetModel(object):
-    def __init__(self, input, output, is_training, weight):
+    def __init__(self, input, output, is_training, weight, kernel_size):
         self.input = input
         self.output = output
         self.is_training = is_training
@@ -55,6 +55,7 @@ class UNetModel(object):
         self.unet = UNet(
             self.input,
             self.is_training,
+            kernel_size,
             'transcription-unet',
             reuse = False
         )
@@ -65,9 +66,8 @@ class UNetModel(object):
         self.train_op = self._optimizer.minimize(self.cost)
 
 class UNet(object):
-    def __init__(self, input, is_training, name, reuse = False):
+    def __init__(self, input, is_training, kernel_size, name, reuse = False):
         with tf.variable_scope(name, reuse = reuse):
-            kernel_size = (5, 5)
             self.encoder = Encoder(input, kernel_size, is_training, reuse)
             self.decoder = Decoder(self.encoder, kernel_size, is_training, reuse)
             self.output = sigmoid(self.decoder.output)
