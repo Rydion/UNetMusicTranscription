@@ -6,11 +6,12 @@ import os
 import time
 import shutil
 import pickle
+import warnings
 import configparser
 import numpy as np
 import tensorflow as tf
 import matplotlib
-matplotlib.use('Agg')
+#matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
@@ -22,6 +23,8 @@ from utils.functions import collapse_array
 
 # Remove unnecessary tensorflow verbosity
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+# Suppress unnecessary warnings from libraries
+warnings.filterwarnings('ignore')
 
 class Wrapper(object):
     def __init__(
@@ -149,12 +152,29 @@ class Wrapper(object):
                 img = Image.fromarray(predicted_gt, 'L')
                 dst_file = os.path.join(plot_dest_dir, '{0}{1}'.format(file_name, self._img_format))
                 img.save(dst_file)
+
                 gt = gt[0, ..., 0]
                 test1 = (predicted_gt_float).astype(np.uint8)
                 test2 = (gt).astype(np.uint8)
-                #test1 = np.transpose(test1)
-                #test2 = np.transpose(test2)
-                print([np.shape(test1), np.shape(test2)])
+
+                def format(pianoroll, sample_length = 0.0078125):
+                    result = []
+                    for i in range(np.shape(pianoroll)[0]):
+                        note_on = False
+                        for j in range(np.shape(pianoroll)[1]):
+                            if pianoroll[i, j] == 1:
+                                if note_on:
+                                    result[-1][2] = result[-1][2] + sample_length
+                                    continue
+
+                                note_on = True
+                                result.append([sample_length*j, i, sample_length, 127])
+                            else:
+                                note_on = False
+                    return result
+                test1 = format(test1)
+                test2 = format(test2)
+
                 eval = NoteEvaluation(test1, test2)
                 print(eval.tostring())
 
@@ -168,7 +188,7 @@ class Wrapper(object):
         return (x > p).astype(x.dtype)
 
     def _onset_offset_detection(self, x):
-        return collapse_array(x, (96, np.shape(x)[1]), np.shape(x)[1]//96, 0)
+        return collapse_array(x, (96, np.shape(x)[1]), np.shape(x)[0]//96, 0)
 
     def _get_datasets(self, src_dir, format, input_suffix, output_suffix, gt_suffix, batch_size = 1):
         def get_dataset(src_dir, format, input_suffix, output_suffix, gt_suffix, bach_size):
