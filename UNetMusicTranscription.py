@@ -505,7 +505,8 @@ def grid_search(
     with open(os.path.join(dst_dir, 'best_model.pkl'), 'wb') as f:
         pickle.dump(best_model, f, pickle.HIGHEST_PROTOCOL)
 
-    print(best_model)
+    with open(os.path.join(dst_dir, 'best_model.txt'), 'w') as text_file:
+        text_file.write(str(best_model))
 
 if __name__ == '__main__':
     conf = configparser.ConfigParser()
@@ -565,5 +566,5 @@ if __name__ == '__main__':
         BATCH_SIZE,
         NUM_EPOCHS,
         WEIGHT,
-        kernel_sizes = [(3, 3), (5, 5), (7, 7)]
+        kernel_sizes = [(3, 3), (5, 5), (7, 7), (9, 9)]
     )
