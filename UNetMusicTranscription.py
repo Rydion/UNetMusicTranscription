@@ -59,6 +59,7 @@ class Wrapper(object):
         self.handle = tf.placeholder(tf.string, shape = [])
         self.iterator = tf.data.Iterator.from_string_handle(self.handle, self.training_dataset.output_types, self.training_dataset.output_shapes)
         self.training_handle = sess.run(self.training_dataset.make_one_shot_iterator().string_handle())
+        self.validation_handle = sess.run(self.validation_dataset.make_one_shot_iterator().string_handle())
         self.test_handle = sess.run(self.test_dataset.make_one_shot_iterator().string_handle())
 
         self.input, self.output, self.ground_truth, self.file_name = self.iterator.get_next()
@@ -72,21 +73,21 @@ class Wrapper(object):
         )
 
         if state == None:
-            self._state = {
+            self.state = {
                 'epoch': 0,
                 'cost': [(0, 0)] # Add an initial element to make the array start at 1 as we will start at epoch 1
             }
             sess.run(tf.global_variables_initializer())
         else:
-            self._state = state
-            self._load_model(model_src_dir, global_step = self._state['epoch'])
+            self.state = state
+            self._load_model(model_src_dir, global_step = self.state['epoch'])
 
-    def train(self, dst_dir, model_dst_dir, training_plot_dst_dir, test_plot_dst_dir):
+    def train(self, dst_dir, model_dst_dir, training_plot_dst_dir, validation_plot_dst_dir):
         i = 0
         samples = 0
         epoch_cost = 0
         while True:
-            if self._state['epoch'] >= self._num_epochs:
+            if self.state['epoch'] >= self._num_epochs:
                 break
 
             x, y, prediction, cost, _ = self.sess.run(
@@ -100,27 +101,27 @@ class Wrapper(object):
 
             # each epoch
             if samples == self.training_dataset_size:
-                self._state['epoch'] = self._state['epoch'] + 1
+                self.state['epoch'] = self.state['epoch'] + 1
 
-                self._save_model(model_dst_dir, global_step = self._state['epoch'])
-                self._plot(x, y, prediction, save = True, id = 'epoch-{0}'.format(self._state['epoch']), dst_dir = training_plot_dst_dir)
+                self._save_model(model_dst_dir, global_step = self.state['epoch'])
+                self._plot(x, y, prediction, save = True, id = 'epoch-{0}'.format(self.state['epoch']), dst_dir = training_plot_dst_dir)
 
                 training_error = epoch_cost/i
 
-                epoch_test_plot_dst_dir =  os.path.join(test_plot_dst_dir, str(self._state['epoch']))
+                epoch_test_plot_dst_dir =  os.path.join(validation_plot_dst_dir, str(self.state['epoch']))
                 if not os.path.exists(epoch_test_plot_dst_dir):
                     os.makedirs(epoch_test_plot_dst_dir)
-                test_error, _ = self.test(plot = True, plot_dest_dir = epoch_test_plot_dst_dir)
+                validation_error = self.validate(plot = True, plot_dest_dir = epoch_test_plot_dst_dir)
 
                 # Update results and save
-                if len(self._state['cost']) == self._state['epoch']:
-                    self._state['cost'].append((training_error, test_error))
+                if len(self.state['cost']) == self.state['epoch']:
+                    self.state['cost'].append((training_error, validation_error))
                 else:
-                    self._state['cost'][self._state['epoch']] = (training_error, test_error)
+                    self.state['cost'][self.state['epoch']] = (training_error, validation_error)
                 with open(os.path.join(dst_dir, 'results.pkl'), 'wb') as f:
-                    pickle.dump(self._state, f, pickle.HIGHEST_PROTOCOL)
+                    pickle.dump(self.state, f, pickle.HIGHEST_PROTOCOL)
 
-                print('Epoch {0} finished. Training error: {1}. Test error: {2}'.format(self._state['epoch'], training_error, test_error))
+                print('Epoch {0} finished. Training error: {1}. Validation error: {2}'.format(self.state['epoch'], training_error, validation_error))
 
                 i = 0
                 samples = 0
@@ -128,7 +129,14 @@ class Wrapper(object):
 
         self._save_model(model_dst_dir)
 
+    def validate(self, plot = False, plot_dest_dir = None):
+        cost, _ = self._test(self.validation_handle, plot = plot, plot_dest_dir = plot_dest_dir)
+        return cost
+
     def test(self, plot = False, save = False, plot_dest_dir = None):
+        return self._test(self.test_handle, plot = plot, save = save, plot_dest_dir = plot_dest_dir)
+
+    def _test(self, handle, plot = False, save = False, plot_dest_dir = None):
         i = 0
         samples = 0
         total_cost = 0
@@ -136,12 +144,12 @@ class Wrapper(object):
         while True:
             x, y, gt, file_name = self.sess.run(
                 [self.input, self.output, self.ground_truth, self.file_name],
-                feed_dict = { self.handle: self.test_handle }
+                feed_dict = { self.handle: handle }
             )
             file_name = file_name[0].decode()
             prediction, cost = self.sess.run(
                 [self.model.prediction, self.model.cost],
-                feed_dict = { self.is_training: False, self.input: x, self.handle: self.test_handle }
+                feed_dict = { self.is_training: False, self.input: x, self.handle: handle }
             )
 
             i = i + 1
@@ -419,15 +427,14 @@ def main(
 
     sess.close()
 
-    return test_cost, eval
+    state = wrapper.state
+    training_cost, validation_cost = state['cost'][-1]
+    return training_cost, validation_cost, test_cost, eval
 
 def grid_search(
     data_src_dir,
     dataset_src_dir,
     dst_dir,
-    model_dst_dir,
-    training_plot_dst_dir,
-    test_plot_dst_dir,
     img_format,
     input_suffix,
     output_suffix,
@@ -443,16 +450,31 @@ def grid_search(
     weight,
     kernel_sizes = [(5, 5)]
 ):
+    dst_dir = dst_dir + '.grid-search'
+
     i = 0
+    best_model = {
+        'iteration': i,
+        'params': {
+            'ks': kernel_sizes[0]
+        },
+        'epochs': num_epochs,
+        'batch_size': batch_size,
+        'training_cost': 0,
+        'validation_cost': np.inf,
+        'test_cost': 0,
+        'eval': None
+    }
     for ks in kernel_sizes:
         print('Grid Search Iteration {0}: ks {1}'.format(i, ks))
-        test_cost, eval = main(
+        it_dst_dir = os.path.join(dst_dir, 'ks-{0}'.format(ks))
+        it_training_cost, it_validation_cost, it_test_cost, it_eval = main(
             data_src_dir,
             dataset_src_dir,
-            dst_dir,
-            model_dst_dir,
-            training_plot_dst_dir,
-            test_plot_dst_dir,
+            it_dst_dir,
+            os.path.join(it_dst_dir, 'unet'),
+            os.path.join(it_dst_dir, 'training-prediction'),
+            os.path.join(it_dst_dir, 'test-prediction'),
             img_format,
             input_suffix,
             output_suffix,
@@ -468,8 +490,22 @@ def grid_search(
             weight,
             ks
         )
-        print([test_cost, eval.tostring()])
+
+        if it_validation_cost < best_model['validation_cost']:
+            best_model['iteration'] = i
+            params = best_model['params']
+            params['ks'] = ks
+            best_model['training_cost'] = it_training_cost
+            best_model['validation_cost'] = it_validation_cost
+            best_model['test_cost'] = it_test_cost
+            best_model['eval'] = it_eval.tostring()
+
         i = i + 1
+
+    with open(os.path.join(dst_dir, 'best_model.pkl'), 'wb') as f:
+        pickle.dump(best_model, f, pickle.HIGHEST_PROTOCOL)
+
+    print(best_model)
 
 if __name__ == '__main__':
     conf = configparser.ConfigParser()
@@ -516,9 +552,6 @@ if __name__ == '__main__':
         DATA_SRC_DIR,       # Raw
         DATASET_SRC_DIR,    # Processed
         DST_DIR,
-        MODEL_DST_DIR,
-        TRAINING_PLOT_DST_DIR,
-        TEST_PLOT_DST_DIR,
         IMG_FORMAT,
         INPUT_SUFFIX,
         OUTPUT_SUFFIX,
@@ -532,5 +565,5 @@ if __name__ == '__main__':
         BATCH_SIZE,
         NUM_EPOCHS,
         WEIGHT,
-        kernel_sizes = [(5, 5), (5, 9)]
+        kernel_sizes = [(3, 3), (5, 5), (7, 7)]
     )
