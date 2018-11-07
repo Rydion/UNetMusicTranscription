@@ -11,7 +11,7 @@ import configparser
 import numpy as np
 import tensorflow as tf
 import matplotlib
-#matplotlib.use('Agg')
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
