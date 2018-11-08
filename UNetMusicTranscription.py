@@ -3,6 +3,7 @@ author: Adrian Hintze
 '''
 
 import os
+os.environ["CUDA_VISIBLE_DEVICES"] = str(1)
 import time
 import shutil
 import pickle
@@ -46,16 +47,15 @@ class Wrapper(object):
         self._img_format = img_format
         self._num_epochs = num_epochs
 
-        with tf.device('/device:GPU:1'):
-            self.training_dataset_size, self.validation_dataset_size, self.test_dataset_size, \
-            self.training_dataset, self.validation_dataset, self.test_dataset = self._get_datasets(
-                dataset_src_dir,
-                self._img_format,
-                input_suffix,
-                output_suffix,
-                gt_suffix,
-                batch_size = batch_size
-            )
+        self.training_dataset_size, self.validation_dataset_size, self.test_dataset_size, \
+        self.training_dataset, self.validation_dataset, self.test_dataset = self._get_datasets(
+            dataset_src_dir,
+            self._img_format,
+            input_suffix,
+            output_suffix,
+            gt_suffix,
+            batch_size = batch_size
+        )
    
         self.handle = tf.placeholder(tf.string, shape = [])
         self.iterator = tf.data.Iterator.from_string_handle(self.handle, self.training_dataset.output_types, self.training_dataset.output_shapes)
@@ -63,26 +63,25 @@ class Wrapper(object):
         self.validation_handle = sess.run(self.validation_dataset.make_one_shot_iterator().string_handle())
         self.test_handle = sess.run(self.test_dataset.make_one_shot_iterator().string_handle())
 
-        with tf.device('/device:GPU:1'):
-            self.input, self.output, self.ground_truth, self.file_name = self.iterator.get_next()
-            self.is_training = tf.placeholder(dtype = bool, shape = ())
-            self.model = UNetModel(
-                self.input,
-                self.output,
-                self.is_training,
-                weight,
-                kernel_size
-            )
+        self.input, self.output, self.ground_truth, self.file_name = self.iterator.get_next()
+        self.is_training = tf.placeholder(dtype = bool, shape = ())
+        self.model = UNetModel(
+            self.input,
+            self.output,
+            self.is_training,
+            weight,
+            kernel_size
+        )
 
-            if state == None:
-                self.state = {
-                    'epoch': 0,
-                    'cost': [(0, 0)] # Add an initial element to make the array start at 1 as we will start at epoch 1
-                }
-                sess.run(tf.global_variables_initializer())
-            else:
-                self.state = state
-                self._load_model(model_src_dir, global_step = self.state['epoch'])
+        if state == None:
+            self.state = {
+                'epoch': 0,
+                'cost': [(0, 0)] # Add an initial element to make the array start at 1 as we will start at epoch 1
+            }
+            sess.run(tf.global_variables_initializer())
+        else:
+            self.state = state
+            self._load_model(model_src_dir, global_step = self.state['epoch'])
 
     def train(self, dst_dir, model_dst_dir, training_plot_dst_dir, validation_plot_dst_dir):
         i = 0
