@@ -42,11 +42,11 @@ class Wrapper(object):
         kernel_size,
         state = None
     ):
-        with tf.device('/device:GPU:1'):
-            self.sess = sess
-            self._img_format = img_format
-            self._num_epochs = num_epochs
+        self.sess = sess
+        self._img_format = img_format
+        self._num_epochs = num_epochs
 
+        with tf.device('/device:GPU:1'):
             self.training_dataset_size, self.validation_dataset_size, self.test_dataset_size, \
             self.training_dataset, self.validation_dataset, self.test_dataset = self._get_datasets(
                 dataset_src_dir,
@@ -56,13 +56,14 @@ class Wrapper(object):
                 gt_suffix,
                 batch_size = batch_size
             )
+   
+        self.handle = tf.placeholder(tf.string, shape = [])
+        self.iterator = tf.data.Iterator.from_string_handle(self.handle, self.training_dataset.output_types, self.training_dataset.output_shapes)
+        self.training_handle = sess.run(self.training_dataset.make_one_shot_iterator().string_handle())
+        self.validation_handle = sess.run(self.validation_dataset.make_one_shot_iterator().string_handle())
+        self.test_handle = sess.run(self.test_dataset.make_one_shot_iterator().string_handle())
 
-            self.handle = tf.placeholder(tf.string, shape = [])
-            self.iterator = tf.data.Iterator.from_string_handle(self.handle, self.training_dataset.output_types, self.training_dataset.output_shapes)
-            self.training_handle = sess.run(self.training_dataset.make_one_shot_iterator().string_handle())
-            self.validation_handle = sess.run(self.validation_dataset.make_one_shot_iterator().string_handle())
-            self.test_handle = sess.run(self.test_dataset.make_one_shot_iterator().string_handle())
-
+        with tf.device('/device:GPU:1'):
             self.input, self.output, self.ground_truth, self.file_name = self.iterator.get_next()
             self.is_training = tf.placeholder(dtype = bool, shape = ())
             self.model = UNetModel(
