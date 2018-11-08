@@ -358,8 +358,7 @@ def init(
             )
 
     tf.reset_default_graph()
-    config = tf.ConfigProto()
-    config.gpu_options.allow_growth = False
+    config = tf.ConfigProto(log_device_placement = True)
     return tf.Session(config = config)
 
 def main(
