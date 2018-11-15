@@ -53,7 +53,25 @@ class Preprocessor:
         self._delete_dst_dir()
         self._create_dst_dirs()
 
+        files = []
         for file in os.listdir(self.src_dir):
+            _, file_extension = os.path.splitext(file)
+            if file_extension == '.wav':
+                files.append(file)
+        
+        training_files, validation_files, test_files = self._split(files)
+        dst_dir = os.path.join(self.dst_dir, 'training')
+        self._preprocess(training_files, dst_dir, gen_input, gen_output, transformation, duration_multiplier)
+        dst_dir = os.path.join(self.dst_dir, 'validation')
+        self._preprocess(validation_files, dst_dir, gen_input, gen_output, transformation, duration_multiplier)
+        dst_dir = os.path.join(self.dst_dir, 'test')
+        self._preprocess(test_files, dst_dir, gen_input, gen_output, transformation, duration_multiplier)
+
+    def _preprocess(self, files, dst_dir, gen_input, gen_output, transformation, duration_multiplier):
+        for file in os.listdir(self.src_dir):
+            if not file in files:
+                continue
+
             file_name, file_extension = os.path.splitext(file)
             # Search for audio files
             if file_extension != '.wav':
@@ -111,19 +129,16 @@ class Preprocessor:
             if gen_input:
                 #spectrogram.save(os.path.join(self.dst_dir, file_name + '.spectrogram.png'), duration, 84)
                 chunks = get_chunk_generator(spectrogram_img, slice_length)
-                self._save_sliced(chunks, file_name, file_suffix = self._input_suffix, binary = False)
+                self._save_sliced(chunks, dst_dir, file_name, file_suffix = self._input_suffix, binary = False)
 
             if gen_output:
                 #midi.save(os.path.join(self.dst_dir, file_name + '.midi.png'), duration, plain = False)
                 # UNET ground truth
                 chunks = get_chunk_generator(midi_img_expanded, slice_length)
-                self._save_sliced(chunks, file_name, file_suffix = self._output_suffix, binary = True)
+                self._save_sliced(chunks, dst_dir, file_name, file_suffix = self._output_suffix, binary = True)
                 # Validation ground truth
                 chunks = get_chunk_generator(midi_img, slice_length)
-                self._save_sliced(chunks, file_name, file_suffix = self._gt_suffix, binary = True)
-
-            # Split into train/test by class
-            self._split()
+                self._save_sliced(chunks, dst_dir, file_name, file_suffix = self._gt_suffix, binary = True)
 
             # Output aesthetics
             print()
@@ -140,7 +155,7 @@ class Preprocessor:
         os.makedirs(self.validation_dst_dir)
         os.makedirs(self.test_dst_dir)
 
-    def _save_sliced(self, chunks, file_name, file_suffix = '', binary = False):
+    def _save_sliced(self, chunks, dst_dir, file_name, file_suffix = '', binary = False):
         slice_length = 0
         start = time.clock()
         for i, c in enumerate(chunks):
@@ -152,52 +167,17 @@ class Preprocessor:
             c = (c*255).astype(np.uint8)
             img = Image.fromarray(c, 'L').rotate(180)
 
-            dst_file = os.path.join(self.dst_dir, file_name + '_' + str(i + 1).zfill(self._fill_digits) + file_suffix + self.img_format)
+            dst_file = os.path.join(dst_dir, file_name + '_' + str(i + 1).zfill(self._fill_digits) + file_suffix + self.img_format)
             img.save(dst_file)
         end = time.clock()
         print('Saved all slices in %.2f seconds.' % (end - start))
 
-    def _split(self):
-        files = []
-        for file in os.listdir(self.dst_dir):
-            if os.path.isdir(file):
-                continue
-
-            file_name, file_extension = os.path.splitext(file)
-            if not file_name.endswith(self._input_suffix):
-                continue
-
-            input_file_name = file_name
-            input_file = file
-            output_file_name = os.path.splitext(file_name)[0] + self._output_suffix
-            output_file = output_file_name + file_extension
-            gt_file_name = os.path.splitext(file_name)[0] + self._gt_suffix
-            gt_file = gt_file_name + file_extension
-            if os.path.isfile(os.path.join(self.dst_dir, output_file)):
-                files.append((os.path.join(self.dst_dir, input_file), os.path.join(self.dst_dir, output_file), os.path.join(self.dst_dir, gt_file)))
-
+    def _split(self, files, training_size = 0.8, validation_size = 0.1, test_size = 0.1):
         dataset_size = len(files)
-        training_dataset_size = int(0.8*dataset_size)
-        validation_dataset_size = int(0.1*dataset_size)
-        test_dataset_size = int(0.1*dataset_size)
+        training_dataset_size = int(training_size*dataset_size)
+        validation_dataset_size = max(int(validation_size*dataset_size), 1)
+        test_dataset_size = max(int(test_size*dataset_size), 1)
         rounding_error = dataset_size - training_dataset_size - validation_dataset_size - test_dataset_size
         training_dataset_size = training_dataset_size + rounding_error
-
         np.random.shuffle(files)
-        training_files, validation_files, test_files = files[:training_dataset_size], files[training_dataset_size:training_dataset_size + validation_dataset_size], files[training_dataset_size + validation_dataset_size:]
-
-        for f in training_files:
-            input_file, output_file, gt_file = f
-            shutil.move(input_file, self.training_dst_dir)
-            shutil.move(output_file, self.training_dst_dir)
-            shutil.move(gt_file, self.training_dst_dir)
-        for f in validation_files:
-            input_file, output_file, gt_file = f
-            shutil.move(input_file, self.validation_dst_dir)
-            shutil.move(output_file, self.validation_dst_dir)
-            shutil.move(gt_file, self.validation_dst_dir)
-        for f in test_files:
-            input_file, output_file, gt_file = f
-            shutil.move(input_file, self.test_dst_dir)
-            shutil.move(output_file, self.test_dst_dir)
-            shutil.move(gt_file, self.test_dst_dir)
+        return files[:training_dataset_size], files[training_dataset_size:training_dataset_size + validation_dataset_size], files[training_dataset_size + validation_dataset_size:]

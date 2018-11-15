@@ -358,8 +358,7 @@ def init(
             )
 
     tf.reset_default_graph()
-    config = tf.ConfigProto(log_device_placement = True)
-    return tf.Session(config = config)
+    return tf.Session()
 
 def main(
     data_src_dir,
@@ -566,5 +565,5 @@ if __name__ == '__main__':
         BATCH_SIZE,
         NUM_EPOCHS,
         WEIGHT,
-        kernel_sizes = [(3, 3), (5, 5), (7, 7), (9, 9)]
+        #kernel_sizes = [(3, 3), (5, 5), (7, 7), (9, 9)]
     )

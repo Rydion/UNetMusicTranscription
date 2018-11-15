@@ -10,35 +10,12 @@ from .Decoder import Decoder
 def sigmoid(inputs):
     return tf.nn.sigmoid(inputs)
 
-def sigmoid_xentropy(logits, targets, weight):
-    #weights = tf.equal(y, 1.0)
-
-    #note_pixels = tf.count_nonzero(weights, dtype = tf.int32)
-    #total_pixels = tf.size(weights, out_type = tf.int32)
-    #ratio = note_pixels/(total_pixels + note_pixels)
-
-    #floatWeights = tf.cast(weights, tf.float32)
-    #trueCase = tf.ones_like(floatWeights)*(total_pixels - note_pixels)
-    #falseCase = tf.ones_like(floatWeights)*note_pixels
-    #trueCase = tf.ones_like(x)*(1.0 - ratio)
-    #falseCase = tf.ones_like(x)*ratio
-
-    #weights = tf.where(weights, trueCase, falseCase)
-    #weights = tf.where(weights, trueCase, falseCase)
-    #weighted_logits = weights*x
-
-    
+def sigmoid_xentropy(logits, targets, weight):    
     ce = tf.nn.weighted_cross_entropy_with_logits(
         targets = targets,
         logits = logits,
         pos_weight = weight
     )
-    '''
-    ce = tf.nn.sigmoid_cross_entropy_with_logits(
-        labels = targets,
-        logits = logits
-    )
-    '''
     return tf.reduce_mean(ce)
 
 class UNetModel(object):
