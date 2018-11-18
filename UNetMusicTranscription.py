@@ -294,6 +294,7 @@ class Wrapper(object):
         y = y[0, ..., 0]
         prediction = prediction[0, ..., 0]
 
+        #fig, ax = plt.subplots(1, 10 if gt == None else 11)
         fig, ax = plt.subplots(1, 10)
         ax[0].imshow(x, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
         ax[1].imshow(y, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
@@ -305,6 +306,11 @@ class Wrapper(object):
         ax[7].imshow(prediction > 0.7, vmin = False, vmax = True, aspect = 'auto', cmap = plt.cm.gray)
         ax[8].imshow(prediction > 0.8, vmin = False, vmax = True, aspect = 'auto', cmap = plt.cm.gray)
         ax[9].imshow(prediction > 0.9, vmin = False, vmax = True, aspect = 'auto', cmap = plt.cm.gray)
+        '''
+        if gt != None:
+            gt = gt[0, ..., 0]
+            ax[10].imshow(gt, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
+        '''
 
         if save:
             fig.savefig(os.path.join(dst_dir, '{0}.png'.format(id)))
@@ -577,6 +583,6 @@ if __name__ == '__main__':
         TRAIN,
         BATCH_SIZE,
         NUM_EPOCHS,
-        weights = [35],
-        kernel_sizes = [(5, 5), (5, 7), (7, 5)]
+        weights = [40],
+        #kernel_sizes = [(5, 5), (5, 7), (7, 5)]
     )

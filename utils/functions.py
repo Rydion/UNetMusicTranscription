@@ -49,5 +49,6 @@ def collapse_array(arr, size, pixel_div, dim):
                 result[i, :] = result[i, :] + arr[i*pixel_div + j, :]
             else:
                 result[:, i] = result[:, i] + arr[:, i*pixel_div + j]
-        result[i, :] = 1 if np.sum(result[i, :]) > pixel_div//2 else 0
+    #result = (result//pixel_div).astype(arr.dtype)
+    result = (result > pixel_div//2).astype(arr.dtype)
     return result
