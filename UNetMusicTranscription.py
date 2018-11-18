@@ -3,7 +3,7 @@ author: Adrian Hintze
 '''
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = str(0)
+os.environ["CUDA_VISIBLE_DEVICES"] = str(1)
 import time
 import shutil
 import pickle
@@ -583,6 +583,6 @@ if __name__ == '__main__':
         TRAIN,
         BATCH_SIZE,
         NUM_EPOCHS,
-        weights = [40],
-        #kernel_sizes = [(5, 5), (5, 7), (7, 5)]
+        weights = [30, 35, 40],
+        kernel_sizes = [(5, 5), (5, 7), (7, 5)]
     )
