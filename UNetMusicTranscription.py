@@ -249,7 +249,7 @@ class Wrapper(object):
                       .from_tensor_slices((input_files, output_files, gt_files, file_names)) \
                       .map(parse_files) \
                       .batch(bach_size) \
-                      .shuffle(20) \
+                      .shuffle(len(input_files)) \
                       .repeat()
 
             return len(input_files), dataset
@@ -332,7 +332,7 @@ def init(
 ):
     if not load:
         shutil.rmtree(dst_dir, ignore_errors = True)
-        # Without the delay sometimes weird shit happens when deleting/creating the folder
+        # Without the delay sometimes weird stuff happens when deleting/creating the folder
         time.sleep(1)
 
         # Crate necessary folders
@@ -446,7 +446,7 @@ def grid_search(
     train,
     batch_size,
     num_epochs,
-    weight,
+    weights = [35],
     kernel_sizes = [(5, 5)]
 ):
     dst_dir = dst_dir + '.grid-search'
@@ -455,7 +455,8 @@ def grid_search(
     best_model = {
         'iteration': i,
         'params': {
-            'ks': kernel_sizes[0]
+            'ks': kernel_sizes[0],
+            'w': weights[0]
         },
         'epochs': num_epochs,
         'batch_size': batch_size,
@@ -465,45 +466,58 @@ def grid_search(
         'eval': None
     }
     for ks in kernel_sizes:
-        print('Grid Search Iteration {0}: ks {1}'.format(i, ks))
-        it_dst_dir = os.path.join(dst_dir, 'ks-{0}'.format(ks))
-        it_training_cost, it_validation_cost, it_test_cost, it_eval = main(
-            data_src_dir,
-            dataset_src_dir,
-            it_dst_dir,
-            os.path.join(it_dst_dir, 'unet'),
-            os.path.join(it_dst_dir, 'training-prediction'),
-            os.path.join(it_dst_dir, 'test-prediction'),
-            img_format,
-            input_suffix,
-            output_suffix,
-            gt_suffix,
-            transformation,
-            downsample_rate,
-            samples_per_second,
-            multiplier,
-            load,
-            train,
-            batch_size,
-            num_epochs,
-            weight,
-            ks
-        )
+        for w in weights:
+            print('Grid Search Iteration {0}: ks {1}, w {2}'.format(i, ks, w))
+            it_dst_dir = os.path.join(dst_dir, 'ks-{0}.w-{1}'.format(ks, w))
+            it_training_cost, it_validation_cost, it_test_cost, it_eval = main(
+                data_src_dir,
+                dataset_src_dir,
+                it_dst_dir,
+                os.path.join(it_dst_dir, 'unet'),
+                os.path.join(it_dst_dir, 'training-prediction'),
+                os.path.join(it_dst_dir, 'test-prediction'),
+                img_format,
+                input_suffix,
+                output_suffix,
+                gt_suffix,
+                transformation,
+                downsample_rate,
+                samples_per_second,
+                multiplier,
+                load,
+                train,
+                batch_size,
+                num_epochs,
+                w,
+                ks
+            )
 
-        if it_validation_cost < best_model['validation_cost']:
-            best_model['iteration'] = i
-            params = best_model['params']
-            params['ks'] = ks
-            best_model['training_cost'] = it_training_cost
-            best_model['validation_cost'] = it_validation_cost
-            best_model['test_cost'] = it_test_cost
-            best_model['eval'] = it_eval.tostring()
+            it_model = {
+                'iteration': i,
+                'params': {
+                    'ks': ks,
+                    'w': w
+                },
+                'epochs': num_epochs,
+                'batch_size': batch_size,
+                'training_cost': it_training_cost,
+                'validation_cost': it_validation_cost,
+                'test_cost': it_test_cost,
+                'eval': it_eval.tostring()
+            }
 
-        i = i + 1
+            with open(os.path.join(dst_dir, '{0}.pkl'.format(i)), 'wb') as f:
+                pickle.dump(it_model, f, pickle.HIGHEST_PROTOCOL)
+            with open(os.path.join(dst_dir, '{0}.txt'.format(i)), 'w') as text_file:
+                text_file.write(str(it_model))
+
+            if it_model['validation_cost'] < best_model['validation_cost']:
+                best_model = it_model
+
+            i = i + 1
 
     with open(os.path.join(dst_dir, 'best_model.pkl'), 'wb') as f:
         pickle.dump(best_model, f, pickle.HIGHEST_PROTOCOL)
-
     with open(os.path.join(dst_dir, 'best_model.txt'), 'w') as text_file:
         text_file.write(str(best_model))
 
@@ -534,7 +548,6 @@ if __name__ == '__main__':
         LOAD = True
     BATCH_SIZE = int(training_conf['batch'])
     NUM_EPOCHS = int(training_conf['epochs'])
-    WEIGHT = int(training_conf['weight'])
 
     # paths
     DATA_SRC_DIR = os.path.join('./data/raw/', DATASET) 
@@ -542,7 +555,7 @@ if __name__ == '__main__':
     FULL_DATASET = '{0}.{1}.dr-{2}.sps-{3}.dm-{4}'.format(DATASET, TRANSFORMATION, DOWNSAMPLE_RATE, SAMPLES_PER_SECOND, DURATION_MULTIPLIER)
     DATASET_SRC_DIR = os.path.join('./data/preprocessed/', FULL_DATASET)
 
-    MODEL_NAME = '{0}.{1}.dr-{2}.sps-{3}.dm-{4}.ne-{5}.bs-{6}.w-{7}'.format(DATASET, TRANSFORMATION, DOWNSAMPLE_RATE, SAMPLES_PER_SECOND, DURATION_MULTIPLIER, NUM_EPOCHS, BATCH_SIZE, WEIGHT)
+    MODEL_NAME = '{0}.{1}.dr-{2}.sps-{3}.dm-{4}.ne-{5}.bs-{6}'.format(DATASET, TRANSFORMATION, DOWNSAMPLE_RATE, SAMPLES_PER_SECOND, DURATION_MULTIPLIER, NUM_EPOCHS, BATCH_SIZE)
     DST_DIR = os.path.join('./results/', MODEL_NAME)
     MODEL_DST_DIR = os.path.join(DST_DIR, 'unet')
     TRAINING_PLOT_DST_DIR = os.path.join(DST_DIR, 'training-prediction')
@@ -564,6 +577,6 @@ if __name__ == '__main__':
         TRAIN,
         BATCH_SIZE,
         NUM_EPOCHS,
-        WEIGHT,
-        #kernel_sizes = [(3, 3), (5, 5), (7, 7), (9, 9)]
+        weights = [35],
+        kernel_sizes = [(5, 5), (5, 7), (7, 5)]
     )
