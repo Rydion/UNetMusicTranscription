@@ -3,7 +3,7 @@ author: Adrian Hintze
 '''
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = str(1)
+import argparse
 import time
 import shutil
 import pickle
@@ -528,40 +528,49 @@ def grid_search(
         text_file.write(str(best_model))
 
 if __name__ == '__main__':
-    conf = configparser.ConfigParser()
-    conf.read('conf.ini')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--device', default = '0')
+    parser.add_argument('--dataset', default = 'mirex')
+    parser.add_argument('--duration', type = int, default = 1)
+    parser.add_argument('--input_suffix', default = '.in')
+    parser.add_argument('--output_suffix', default = '.out')
+    parser.add_argument('--gt_suffix', default = '.gt')
+    parser.add_argument('--downsample_rate', type = int, default = 16384)
+    parser.add_argument('--samples_per_second', type = int, default = 128)
+    parser.add_argument('--load', type = bool, default = False)
+    parser.add_argument('--train', type = bool, default = True)
+    parser.add_argument('--epochs', type = int, default = 30)
+    parser.add_argument('--batch_size', type = int, default = 1)
+    args = parser.parse_args()
 
-    # global conf
-    global_conf = conf['global']
-    DATASET = global_conf['dataset']
-    DURATION_MULTIPLIER = int(global_conf['multiplier'])
-    TRANSFORMATION = global_conf['transformation']
-    IMG_FORMAT = global_conf['format']
-    INPUT_SUFFIX = global_conf['input_suffix']
-    OUTPUT_SUFFIX = global_conf['output_suffix']
-    GT_SUFFIX = global_conf['gt_suffix']
+    os.environ['CUDA_VISIBLE_DEVICES'] = args.device
 
-    # preprocessing conf
-    process_conf = conf['processing']
-    DOWNSAMPLE_RATE = int(process_conf['downsample'])
-    SAMPLES_PER_SECOND = int(process_conf['samples_per_second'])
+    DATASET = args.dataset
+    DURATION = args.duration
+    TRANSFORMATION = 'cqt'
+    IMG_FORMAT = '.png'
+    INPUT_SUFFIX = args.input_suffix
+    OUTPUT_SUFFIX = args.output_suffix
+    GT_SUFFIX = args.gt_suffix
 
-    # training conf
-    training_conf = conf['training']
-    LOAD = training_conf.getboolean('load')
-    TRAIN = training_conf.getboolean('train')
+    DOWNSAMPLE_RATE = args.downsample_rate
+    SAMPLES_PER_SECOND = args.samples_per_second
+
+    LOAD = args.load
+    TRAIN = args.train
     if not TRAIN:
         LOAD = True
-    BATCH_SIZE = int(training_conf['batch'])
-    NUM_EPOCHS = int(training_conf['epochs'])
+
+    BATCH_SIZE = args.batch_size
+    EPOCHS = args.epochs
 
     # paths
     DATA_SRC_DIR = os.path.join('./data/raw/', DATASET) 
 
-    FULL_DATASET = '{0}.{1}.dr-{2}.sps-{3}.dm-{4}'.format(DATASET, TRANSFORMATION, DOWNSAMPLE_RATE, SAMPLES_PER_SECOND, DURATION_MULTIPLIER)
+    FULL_DATASET = '{0}.{1}.dr-{2}.sps-{3}.dm-{4}'.format(DATASET, TRANSFORMATION, DOWNSAMPLE_RATE, SAMPLES_PER_SECOND, DURATION)
     DATASET_SRC_DIR = os.path.join('./data/preprocessed/', FULL_DATASET)
 
-    MODEL_NAME = '{0}.{1}.dr-{2}.sps-{3}.dm-{4}.ne-{5}.bs-{6}'.format(DATASET, TRANSFORMATION, DOWNSAMPLE_RATE, SAMPLES_PER_SECOND, DURATION_MULTIPLIER, NUM_EPOCHS, BATCH_SIZE)
+    MODEL_NAME = '{0}.{1}.dr-{2}.sps-{3}.dm-{4}.ne-{5}.bs-{6}'.format(DATASET, TRANSFORMATION, DOWNSAMPLE_RATE, SAMPLES_PER_SECOND, DURATION, EPOCHS, BATCH_SIZE)
     DST_DIR = os.path.join('./results/', MODEL_NAME)
     MODEL_DST_DIR = os.path.join(DST_DIR, 'unet')
     TRAINING_PLOT_DST_DIR = os.path.join(DST_DIR, 'training-prediction')
@@ -578,11 +587,11 @@ if __name__ == '__main__':
         TRANSFORMATION,
         DOWNSAMPLE_RATE,
         SAMPLES_PER_SECOND,
-        DURATION_MULTIPLIER,
+        DURATION,
         LOAD,
         TRAIN,
         BATCH_SIZE,
-        NUM_EPOCHS,
-        weights = [30, 35, 40],
-        kernel_sizes = [(5, 5), (5, 7), (7, 5)]
+        EPOCHS,
+        #weights = [30, 35, 40],
+        #kernel_sizes = [(5, 5), (5, 7), (7, 5)]
     )

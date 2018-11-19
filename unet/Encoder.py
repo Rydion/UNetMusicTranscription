@@ -35,19 +35,19 @@ class Encoder(object):
 
         with tf.variable_scope('encoder'):
             n = 1
-            filters = 1
-            num_layers = 7
+            filters = 9
+            num_layers = 6
             while n <= num_layers:
+                stride = (3, 2) if (n == 1) else (2, 2) 
                 with tf.variable_scope('layer-{0}'.format(n)):
+                    print(['layer-{0}'.format(n), filters, stride])
                     if n > 1:
                         net = lrelu(net)
-                    stride = (3, 2) if (n >= num_layers - 1) else (2, 2)
-                    filters = filters*3 if (n >= num_layers - 1) else filters*2
                     net = conv(net, filters = filters, kernel_size = kernel_size, stride = stride)
                     if n < num_layers:
                         if n > 1:
                             net = batch_norm(net, is_training = is_training, reuse = reuse)
                         self.layers.append(net)
+                filters = filters*2
                 n = n + 1
-
             self.output = net
