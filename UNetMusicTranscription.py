@@ -410,7 +410,6 @@ def main(
     if load:
         with open(os.path.join(dst_dir, 'results.pkl'), 'rb') as f:
             state = pickle.load(f)
-            print(state)
     wrapper = Wrapper(
         sess,
         dataset_src_dir,
@@ -464,8 +463,6 @@ def grid_search(
             'ks': kernel_sizes[0],
             'w': weights[0]
         },
-        'epochs': num_epochs,
-        'batch_size': batch_size,
         'training_cost': 0,
         'validation_cost': np.inf,
         'test_cost': 0,
@@ -504,8 +501,6 @@ def grid_search(
                     'ks': ks,
                     'w': w
                 },
-                'epochs': num_epochs,
-                'batch_size': batch_size,
                 'training_cost': it_training_cost,
                 'validation_cost': it_validation_cost,
                 'test_cost': it_test_cost,

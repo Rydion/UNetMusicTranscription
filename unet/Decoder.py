@@ -45,7 +45,7 @@ class Decoder(object):
             while n <= num_layers:
                 stride = (3, 2) if (n == num_layers) else (2, 2)
                 with tf.variable_scope('layer-{0}'.format(n)):
-                    print(['layer-{0}'.format(n), filters, stride])
+                    #print(['layer-{0}'.format(n), filters, stride])
                     net = relu(net) if n == 1 else relu(concat(net, encoder.layers[num_layers - n]))
                     net = deconv(net, filters = filters, kernel_size = kernel_size, stride = stride)
                     if n < num_layers:

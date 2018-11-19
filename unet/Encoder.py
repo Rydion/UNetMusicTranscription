@@ -40,7 +40,7 @@ class Encoder(object):
             while n <= num_layers:
                 stride = (3, 2) if (n == 1) else (2, 2) 
                 with tf.variable_scope('layer-{0}'.format(n)):
-                    print(['layer-{0}'.format(n), filters, stride])
+                    #print(['layer-{0}'.format(n), filters, stride])
                     if n > 1:
                         net = lrelu(net)
                     net = conv(net, filters = filters, kernel_size = kernel_size, stride = stride)
