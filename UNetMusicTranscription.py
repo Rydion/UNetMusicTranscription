@@ -3,7 +3,7 @@ author: Adrian Hintze
 '''
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = str(0)
+os.environ["CUDA_VISIBLE_DEVICES"] = str(1)
 import time
 import shutil
 import pickle
