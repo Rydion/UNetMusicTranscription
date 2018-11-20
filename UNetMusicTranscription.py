@@ -83,7 +83,11 @@ class Wrapper(object):
             sess.run(tf.global_variables_initializer())
         else:
             self.state = state
-            self._load_model(model_src_dir, global_step = self.state['epoch'])
+            self.state['epoch'] = self.state['epoch'] - self.state['epoch']%10
+            if self.state['epoch'] != 0:
+                self._load_model(model_src_dir, global_step = self.state['epoch'])
+            else:
+                sess.run(tf.global_variables_initializer())
 
     def train(self, dst_dir, model_dst_dir, training_plot_dst_dir, validation_plot_dst_dir, early_stop_epochs = 20):
         i = 0
@@ -109,16 +113,18 @@ class Wrapper(object):
             if samples == self.training_dataset_size:
                 self.state['epoch'] = self.state['epoch'] + 1
 
-                self._save_model(model_dst_dir, global_step = self.state['epoch'])
+                save_epoch = self.state['epoch']%10 == 0
+
+                if save_epoch:
+                    self._save_model(model_dst_dir, global_step = self.state['epoch'])
                 self._plot(x, y, prediction, save = True, id = 'epoch-{0}'.format(self.state['epoch']), dst_dir = training_plot_dst_dir)
 
                 training_cost = epoch_cost/i
 
                 epoch_test_plot_dst_dir = os.path.join(validation_plot_dst_dir, str(self.state['epoch']))
-                plot = self.state['epoch']%10 == 0
-                if plot and not os.path.exists(epoch_test_plot_dst_dir):
+                if save_epoch and not os.path.exists(epoch_test_plot_dst_dir):
                     os.makedirs(epoch_test_plot_dst_dir)
-                validation_cost = self.validate(plot = plot, plot_dest_dir = epoch_test_plot_dst_dir)
+                validation_cost = self.validate(plot = save_epoch, plot_dest_dir = epoch_test_plot_dst_dir)
 
                 # Update results and save
                 if len(self.state['cost']) == self.state['epoch']:
@@ -598,7 +604,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', default = '0')
     parser.add_argument('--dataset', default = 'mirex')
-    parser.add_argument('--duration', type = int, default = 4)
+    parser.add_argument('--duration', type = int, default = 1)
     parser.add_argument('--input_suffix', default = '.in')
     parser.add_argument('--output_suffix', default = '.out')
     parser.add_argument('--gt_suffix', default = '.gt')
@@ -659,6 +665,6 @@ if __name__ == '__main__':
         TRAIN,
         BATCH_SIZE,
         EPOCHS,
-        weights = [30, 35, 40],
-        kernel_sizes = [(5, 5), (5, 7), (7, 5), (7, 7)]
+        #weights = [30, 35, 40],
+        #kernel_sizes = [(5, 5), (5, 7), (7, 5), (7, 7)]
     )
