@@ -114,10 +114,11 @@ class Wrapper(object):
 
                 training_cost = epoch_cost/i
 
-                epoch_test_plot_dst_dir =  os.path.join(validation_plot_dst_dir, str(self.state['epoch']))
-                if not os.path.exists(epoch_test_plot_dst_dir):
+                epoch_test_plot_dst_dir = os.path.join(validation_plot_dst_dir, str(self.state['epoch']))
+                plot = self.state['epoch']%10 == 0
+                if plot and not os.path.exists(epoch_test_plot_dst_dir):
                     os.makedirs(epoch_test_plot_dst_dir)
-                validation_cost = self.validate(plot = True, plot_dest_dir = epoch_test_plot_dst_dir)
+                validation_cost = self.validate(plot = plot, plot_dest_dir = epoch_test_plot_dst_dir)
 
                 # Update results and save
                 if len(self.state['cost']) == self.state['epoch']:
@@ -517,6 +518,19 @@ def grid_search(
         'training_cost': 0,
         'validation_cost': np.inf,
         'test_cost': 0,
+        'fscore': 0,
+        'eval': None
+    }
+    best_eval = {
+        'iteration': i,
+        'params': {
+            'ks': kernel_sizes[0],
+            'w': weights[0]
+        },
+        'training_cost': 0,
+        'validation_cost': 0,
+        'test_cost': 0,
+        'fscore': np.inf,
         'eval': None
     }
     for ks in kernel_sizes:
@@ -555,6 +569,7 @@ def grid_search(
                 'training_cost': it_training_cost,
                 'validation_cost': it_validation_cost,
                 'test_cost': it_test_cost,
+                'fscore': it_eval['0.1']['fmeasure'],
                 'eval': it_eval
             }
 
@@ -565,6 +580,8 @@ def grid_search(
 
             if it_model['validation_cost'] < best_model['validation_cost']:
                 best_model = it_model
+            if it_model['eval']['0.1']['fmeasure'] < best_eval['fscore']:
+                best_eval = it_model
 
             i = i + 1
 
@@ -572,12 +589,16 @@ def grid_search(
         pickle.dump(best_model, f, pickle.HIGHEST_PROTOCOL)
     with open(os.path.join(dst_dir, 'best_model.txt'), 'w') as text_file:
         text_file.write(str(best_model))
+    with open(os.path.join(dst_dir, 'best_eval.pkl'), 'wb') as f:
+        pickle.dump(best_eval, f, pickle.HIGHEST_PROTOCOL)
+    with open(os.path.join(dst_dir, 'best_eval.txt'), 'w') as text_file:
+        text_file.write(str(best_eval))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', default = '0')
     parser.add_argument('--dataset', default = 'mirex')
-    parser.add_argument('--duration', type = int, default = 5)
+    parser.add_argument('--duration', type = int, default = 4)
     parser.add_argument('--input_suffix', default = '.in')
     parser.add_argument('--output_suffix', default = '.out')
     parser.add_argument('--gt_suffix', default = '.gt')
@@ -638,6 +659,6 @@ if __name__ == '__main__':
         TRAIN,
         BATCH_SIZE,
         EPOCHS,
-        #weights = [30, 35, 40],
+        weights = [30, 35],
         #kernel_sizes = [(5, 5), (5, 7), (7, 5)]
     )
