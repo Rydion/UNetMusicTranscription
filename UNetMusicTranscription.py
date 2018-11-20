@@ -580,7 +580,7 @@ def grid_search(
 
             if it_model['validation_cost'] < best_model['validation_cost']:
                 best_model = it_model
-            if it_model['eval']['0.1']['fmeasure'] < best_eval['fscore']:
+            if it_model['eval']['0.1']['fmeasure'] > best_eval['fscore']:
                 best_eval = it_model
 
             i = i + 1
