@@ -691,6 +691,6 @@ if __name__ == '__main__':
         TRAIN,
         BATCH_SIZE,
         EPOCHS,
-        #weights = [25, 30, 35, 40],
-        #kernel_sizes = [(5, 5), (7, 7), (9, 9)]
+        weights = [25, 30, 35, 40],
+        kernel_sizes = [(5, 5), (7, 7), (9, 9)]
     )
