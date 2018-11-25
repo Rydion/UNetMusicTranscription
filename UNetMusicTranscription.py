@@ -164,12 +164,20 @@ class Wrapper(object):
         i = 0
         samples = 0
         total_cost = 0
-        evaluations = {
+        evaluations_cost = {
             '0.1': [],
             '0.07': [],
             '0.05': [],
             '0.03': [],
             '0.01': [],
+        }
+        evaluations = {
+            '0.7': dict(evaluations_cost),
+            '0.75': dict(evaluations_cost),
+            '0.8': dict(evaluations_cost),
+            '0.85': dict(evaluations_cost),
+            '0.9': dict(evaluations_cost),
+            '0.95': dict(evaluations_cost)
         }
         while True:
             x, y, gt, file_name = self.sess.run(
@@ -191,8 +199,8 @@ class Wrapper(object):
             if save or evaluate:
                 gt = gt[0, ..., 0]
                 prediction = prediction[0, ..., 0]
-                prediction = self._threshold_probability(prediction)
-                predicted_gt_float = self._onset_detection(prediction)
+                thesholded_prediction = self._threshold_probability(prediction)
+                predicted_gt_float = self._onset_detection(thesholded_prediction)
                 if save:
                     img = Image.fromarray((predicted_gt_float*255).astype(np.uint8), 'L')
                     dst_file = os.path.join(plot_dest_dir, '{0}{1}{2}'.format(file_name, '.p', self._img_format))
@@ -202,33 +210,38 @@ class Wrapper(object):
                     img.save(dst_file)
                 if evaluate:
                     windows = [0.1, 0.07, 0.05, 0.03, 0.01]
-                    for w in windows:
-                        evaluations[str(w)].append(self._evaluate_note_onset(
-                            (predicted_gt_float).astype(np.uint8),
-                            (gt).astype(np.uint8),
-                            1/self._samples_per_second,
-                            window = w
-                        ))
+                    thresholds = [0.7, 0.75, 0.8, 0.85, 0.9, 0.95]
+                    for t in thresholds:
+                        thesholded_prediction = self._threshold_probability(prediction, p = t)
+                        predicted_gt_float = self._onset_detection(thesholded_prediction)
+                        for w in windows:
+                            evaluations[str(t)][str(w)].append(self._evaluate_note_onset(
+                                (predicted_gt_float).astype(np.uint8),
+                                (gt).astype(np.uint8),
+                                1/self._samples_per_second,
+                                window = w
+                            ))
 
             # one epoch
             if samples == self.test_dataset_size:
                 break
 
         for key in evaluations:
-            eval = NoteMeanEvaluation(evaluations[key])
-            eval = {
-                'num_annotations': eval.num_annotations,
-                'num_tp': eval.num_tp,
-                'num_fp': eval.num_fp,
-                'num_fn': eval.num_fn,
-                'precision': eval.precision,
-                'recall': eval.recall,
-                'fmeasure': eval.fmeasure,
-                'accuracy': eval.accuracy,
-                'mean_error': eval.mean_error*1000.0,
-                'std_error': eval.std_error*1000.0
-            }
-            evaluations[key] = eval
+            for key2 in evaluations[key]:
+                eval = NoteMeanEvaluation(evaluations[key][key2])
+                eval = {
+                    'num_annotations': eval.num_annotations,
+                    'num_tp': eval.num_tp,
+                    'num_fp': eval.num_fp,
+                    'num_fn': eval.num_fn,
+                    'precision': eval.precision,
+                    'recall': eval.recall,
+                    'fscore': eval.fmeasure,
+                    'accuracy': eval.accuracy,
+                    'mean_error': eval.mean_error*1000.0,
+                    'std_error': eval.std_error*1000.0
+                }
+                evaluations[key][key2] = eval
 
         return total_cost/i, evaluations
 
@@ -490,7 +503,7 @@ def main(
     with open(os.path.join(dst_dir, 'test.txt'), 'w') as text_file:
         text_file.write(str(results))
     with open(os.path.join(dst_dir, 'test.pkl'), 'wb') as f:
-            pickle.dump(results, f, pickle.HIGHEST_PROTOCOL)
+        pickle.dump(results, f, pickle.HIGHEST_PROTOCOL)
     return training_cost, validation_cost, test_cost, eval
 
 def grid_search(
@@ -525,6 +538,8 @@ def grid_search(
         'validation_cost': np.inf,
         'test_cost': 0,
         'fscore': 0,
+        'threshold': 0,
+        'window': 0,
         'eval': None
     }
     best_eval = {
@@ -536,7 +551,9 @@ def grid_search(
         'training_cost': 0,
         'validation_cost': 0,
         'test_cost': 0,
-        'fscore': np.inf,
+        'fscore': 0,
+        'threshold': 0,
+        'window': 0,
         'eval': None
     }
     for ks in kernel_sizes:
@@ -575,9 +592,18 @@ def grid_search(
                 'training_cost': it_training_cost,
                 'validation_cost': it_validation_cost,
                 'test_cost': it_test_cost,
-                'fscore': it_eval['0.1']['fmeasure'],
+                'fscore': 0,
+                'threshold': 0,
+                'window': 0,
                 'eval': it_eval
             }
+
+            for t in it_eval:
+                for w in it_eval[t]:
+                    if it_model['fscore'] < it_eval[t][w]['fscore']:
+                        it_model['fscore'] = it_eval[t][w]['fscore']
+                        it_model['threshold'] = float(t)
+                        it_model['window'] = float(w)
 
             with open(os.path.join(dst_dir, '{0}.pkl'.format(i)), 'wb') as f:
                 pickle.dump(it_model, f, pickle.HIGHEST_PROTOCOL)
@@ -586,7 +612,7 @@ def grid_search(
 
             if it_model['validation_cost'] < best_model['validation_cost']:
                 best_model = it_model
-            if it_model['eval']['0.1']['fmeasure'] > best_eval['fscore']:
+            if it_model['fscore'] > best_eval['fscore']:
                 best_eval = it_model
 
             i = i + 1
@@ -665,6 +691,6 @@ if __name__ == '__main__':
         TRAIN,
         BATCH_SIZE,
         EPOCHS,
-        weights = [25, 30, 35, 40],
-        kernel_sizes = [(5, 5), (7, 7), (9, 9)]
+        #weights = [25, 30, 35, 40],
+        #kernel_sizes = [(5, 5), (7, 7), (9, 9)]
     )
