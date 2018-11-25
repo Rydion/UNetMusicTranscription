@@ -53,13 +53,41 @@ class Preprocessor:
         self._delete_dst_dir()
         self._create_dst_dirs()
 
-        files = []
-        for file in os.listdir(self.src_dir):
-            _, file_extension = os.path.splitext(file)
-            if file_extension == '.wav':
-                files.append(file)
-        
-        training_files, validation_files, test_files = self._split(files)
+        def get_wav_files_in_dir(dir):
+            files = []
+            for file in os.listdir(dir):
+                _, file_extension = os.path.splitext(file)
+                if file_extension == '.wav':
+                    files.append(file)
+            return files
+
+        training_files = []
+        validation_files = []
+        test_files = []
+        if os.path.isdir(os.path.join(self.src_dir, 'training')):
+            training_files = get_wav_files_in_dir(os.path.join(self.src_dir, 'training'))
+            validation_files = get_wav_files_in_dir(os.path.join(self.src_dir, 'validation'))
+            test_files = get_wav_files_in_dir(os.path.join(self.src_dir, 'test'))
+        else:
+            files = get_wav_files_in_dir(self.src_dir)
+            training_files, validation_files, test_files = self._split(files)
+            self._create_src_dirs()
+            for file in training_files:
+                shutil.copyfile(os.path.join(self.src_dir, file), os.path.join(self.src_dir, 'training', file))
+                file_name, _ = os.path.splitext(file)
+                mid_file = file_name + '.mid'
+                shutil.copyfile(os.path.join(self.src_dir, mid_file), os.path.join(self.src_dir, 'training', mid_file))
+            for file in validation_files:
+                shutil.copyfile(os.path.join(self.src_dir, file), os.path.join(self.src_dir, 'validation', file))
+                file_name, _ = os.path.splitext(file)
+                mid_file = file_name + '.mid'
+                shutil.copyfile(os.path.join(self.src_dir, mid_file), os.path.join(self.src_dir, 'validation', mid_file))
+            for file in test_files:
+                shutil.copyfile(os.path.join(self.src_dir, file), os.path.join(self.src_dir, 'test', file))
+                file_name, _ = os.path.splitext(file)
+                mid_file = file_name + '.mid'
+                shutil.copyfile(os.path.join(self.src_dir, mid_file), os.path.join(self.src_dir, 'test', mid_file))
+
         dst_dir = os.path.join(self.dst_dir, 'training')
         self._preprocess(training_files, dst_dir, gen_input, gen_output, transformation, duration_multiplier)
         dst_dir = os.path.join(self.dst_dir, 'validation')
@@ -154,6 +182,11 @@ class Preprocessor:
         os.makedirs(self.training_dst_dir)
         os.makedirs(self.validation_dst_dir)
         os.makedirs(self.test_dst_dir)
+
+    def _create_src_dirs(self):
+        os.makedirs(os.path.join(self.src_dir, 'training'))
+        os.makedirs(os.path.join(self.src_dir, 'validation'))
+        os.makedirs(os.path.join(self.src_dir, 'test'))
 
     def _save_sliced(self, chunks, dst_dir, file_name, file_suffix = '', binary = False):
         slice_length = 0

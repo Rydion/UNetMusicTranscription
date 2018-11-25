@@ -88,7 +88,6 @@
     <Content Include="data\raw\smd\Bartok_SZ080-03_002_20110315-SMD.wav" />
     <Content Include="LICENSE" />
     <Content Include="README.md" />
-    <Content Include="conf.ini" />
     <Content Include="requirements.txt" />
   </ItemGroup>
   <ItemGroup>
