@@ -209,8 +209,8 @@ class Wrapper(object):
                     dst_file = os.path.join(plot_dest_dir, '{0}{1}{2}'.format(file_name, '.gt', self._img_format))
                     img.save(dst_file)
                 if evaluate:
-                    windows = [0.1, 0.07, 0.05, 0.03, 0.01]
                     thresholds = [0.7, 0.75, 0.8, 0.85, 0.9, 0.95]
+                    windows = [0.1, 0.07, 0.05, 0.03, 0.01]
                     for t in thresholds:
                         thesholded_prediction = self._threshold_probability(prediction, p = t)
                         predicted_gt_float = self._onset_detection(thesholded_prediction)
@@ -489,7 +489,7 @@ def main(
 
     if train:
         wrapper.train(dst_dir, model_dst_dir, training_plot_dst_dir, test_plot_dst_dir)
-    test_cost, eval = wrapper.test(save = True, plot_dest_dir = test_plot_dst_dir)
+    test_cost, eval = wrapper.test(plot = True, save = True, plot_dest_dir = test_plot_dst_dir)
 
     sess.close()
 
@@ -498,6 +498,7 @@ def main(
     results = {
         'training_cost': training_cost,
         'validation_cost': validation_cost,
+        'test_cost': test_cost,
         'eval': eval
     }
     with open(os.path.join(dst_dir, 'test.txt'), 'w') as text_file:
