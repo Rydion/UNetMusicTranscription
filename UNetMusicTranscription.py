@@ -361,17 +361,16 @@ class Wrapper(object):
         y = y[0, ..., 0]
         prediction = prediction[0, ..., 0]
 
-        fig, ax = plt.subplots(1, 10)
+        fig, ax = plt.subplots(1, 9)
         ax[0].imshow(x, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
         ax[1].imshow(y, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
         ax[2].imshow(prediction, vmin = 0, vmax = 1, aspect = 'auto', cmap = plt.cm.gray)
-        ax[3].imshow(prediction > 0.3, vmin = False, vmax = True, aspect = 'auto', cmap = plt.cm.gray)
-        ax[4].imshow(prediction > 0.4, vmin = False, vmax = True, aspect = 'auto', cmap = plt.cm.gray)
-        ax[5].imshow(prediction > 0.5, vmin = False, vmax = True, aspect = 'auto', cmap = plt.cm.gray)
-        ax[6].imshow(prediction > 0.6, vmin = False, vmax = True, aspect = 'auto', cmap = plt.cm.gray)
-        ax[7].imshow(prediction > 0.7, vmin = False, vmax = True, aspect = 'auto', cmap = plt.cm.gray)
-        ax[8].imshow(prediction > 0.8, vmin = False, vmax = True, aspect = 'auto', cmap = plt.cm.gray)
-        ax[9].imshow(prediction > 0.9, vmin = False, vmax = True, aspect = 'auto', cmap = plt.cm.gray)
+        ax[3].imshow(prediction > 0.7, vmin = False, vmax = True, aspect = 'auto', cmap = plt.cm.gray)
+        ax[4].imshow(prediction > 0.75, vmin = False, vmax = True, aspect = 'auto', cmap = plt.cm.gray)
+        ax[5].imshow(prediction > 0.8, vmin = False, vmax = True, aspect = 'auto', cmap = plt.cm.gray)
+        ax[6].imshow(prediction > 0.85, vmin = False, vmax = True, aspect = 'auto', cmap = plt.cm.gray)
+        ax[7].imshow(prediction > 0.9, vmin = False, vmax = True, aspect = 'auto', cmap = plt.cm.gray)
+        ax[8].imshow(prediction > 0.95, vmin = False, vmax = True, aspect = 'auto', cmap = plt.cm.gray)
 
         if save:
             fig.savefig(os.path.join(dst_dir, '{0}.png'.format(id)))
