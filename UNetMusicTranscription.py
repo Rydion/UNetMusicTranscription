@@ -202,9 +202,15 @@ class Wrapper(object):
                 thesholded_prediction = self._threshold_probability(prediction)
                 predicted_gt_float = self._onset_detection(thesholded_prediction)
                 if save:
+                    # Save output
+                    img = Image.fromarray((thesholded_prediction*255).astype(np.uint8), 'L')
+                    dst_file = os.path.join(plot_dest_dir, '{0}{1}{2}'.format(file_name, '.o', self._img_format))
+                    img.save(dst_file)
+                    # Save prediction
                     img = Image.fromarray((predicted_gt_float*255).astype(np.uint8), 'L')
                     dst_file = os.path.join(plot_dest_dir, '{0}{1}{2}'.format(file_name, '.p', self._img_format))
                     img.save(dst_file)
+                    # Save ground truth
                     img = Image.fromarray((gt*255).astype(np.uint8), 'L')
                     dst_file = os.path.join(plot_dest_dir, '{0}{1}{2}'.format(file_name, '.gt', self._img_format))
                     img.save(dst_file)
