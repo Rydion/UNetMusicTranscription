@@ -20,7 +20,7 @@ from PIL import Image
 from madmom.evaluation.notes import NoteEvaluation, NoteMeanEvaluation
 from unet.Unet import UNetModel
 from utils.Preprocessor import Preprocessor
-from utils.functions import collapse_array
+from utils.functions import collapse_array, str2bool
 
 # Remove unnecessary tensorflow verbosity
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
@@ -642,8 +642,8 @@ if __name__ == '__main__':
     parser.add_argument('--gt_suffix', default = '.gt')
     parser.add_argument('--downsample_rate', type = int, default = 16384)
     parser.add_argument('--samples_per_second', type = int, default = 128)
-    parser.add_argument('--load', type = bool, default = False)
-    parser.add_argument('--train', type = bool, default = True)
+    parser.add_argument('--load', type = str2bool, default = False)
+    parser.add_argument('--train', type = str2bool, default = True)
     parser.add_argument('--epochs', type = int, default = 35)
     parser.add_argument('--batch_size', type = int, default = 1)
     args = parser.parse_args()
