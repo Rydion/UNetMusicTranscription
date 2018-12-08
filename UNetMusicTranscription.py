@@ -180,17 +180,6 @@ class Wrapper(object):
             '0.95': dict(evaluations_cost)
         }
         while True:
-            '''
-            x, y, gt, file_name = self.sess.run(
-                [self.input, self.output, self.ground_truth, self.file_name],
-                feed_dict = { self.handle: handle }
-            )
-            file_name = file_name[0].decode()
-            prediction, cost = self.sess.run(
-                [self.model.prediction, self.model.cost],
-                feed_dict = { self.is_training: False, self.input: x, self.handle: handle }
-            )
-            '''
             x, y, gt, file_name, prediction, cost = self.sess.run(
                 [self.input, self.output, self.ground_truth, self.file_name, self.model.prediction, self.model.cost],
                 feed_dict = { self.is_training: False, self.handle: handle }
@@ -331,9 +320,8 @@ class Wrapper(object):
                       .from_tensor_slices((input_files, output_files, gt_files, file_names)) \
                       .map(parse_files) \
                       .batch(bach_size) \
+                      .shuffle(len(input_files)) \
                       .repeat()
-                      #.shuffle(len(input_files)) \
-                      #.repeat()
 
             return len(input_files), dataset
 
