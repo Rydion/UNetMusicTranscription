@@ -145,7 +145,7 @@ class Wrapper(object):
 
                 if early_stop_counter == early_stop_epochs:
                     print('Early stop at epoch {0}.'.format(self.state['epoch']))
-                    break
+                    #break
 
                 i = 0
                 samples = 0
