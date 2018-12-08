@@ -1,7 +1,7 @@
 numpy==1.15.4
 tensorflow-gpu==1.9.0
 matplotlib==2.2.3
-pypianoroll==0.4.6
+pretty-midi==0.2.8
 librosa==0.6.2
 Pillow==5.2.0
 Cython==0.28.5
