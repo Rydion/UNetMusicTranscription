@@ -154,13 +154,13 @@ class Wrapper(object):
         self._save_model(model_dst_dir)
 
     def validate(self, plot = False, plot_dest_dir = None):
-        cost, _ = self._test(self.validation_handle, plot = plot, plot_dest_dir = plot_dest_dir)
+        cost, _ = self._test(self.validation_handle, self.validation_dataset_size, plot = plot, plot_dest_dir = plot_dest_dir)
         return cost
 
     def test(self, plot = False, save = False, plot_dest_dir = None):
-        return self._test(self.test_handle, plot = plot, save = save, plot_dest_dir = plot_dest_dir, evaluate = True)
+        return self._test(self.test_handle, self.test_dataset_size, plot = plot, save = save, plot_dest_dir = plot_dest_dir, evaluate = True)
 
-    def _test(self, handle, plot = False, save = False, plot_dest_dir = None, evaluate = False):
+    def _test(self, handle, dataset_size, plot = False, save = False, plot_dest_dir = None, evaluate = False):
         i = 0
         samples = 0
         total_cost = 0
@@ -180,6 +180,7 @@ class Wrapper(object):
             '0.95': dict(evaluations_cost)
         }
         while True:
+            '''
             x, y, gt, file_name = self.sess.run(
                 [self.input, self.output, self.ground_truth, self.file_name],
                 feed_dict = { self.handle: handle }
@@ -189,10 +190,17 @@ class Wrapper(object):
                 [self.model.prediction, self.model.cost],
                 feed_dict = { self.is_training: False, self.input: x, self.handle: handle }
             )
+            '''
+            x, y, gt, file_name, prediction, cost = self.sess.run(
+                [self.input, self.output, self.ground_truth, self.file_name, self.model.prediction, self.model.cost],
+                feed_dict = { self.is_training: False, self.handle: handle }
+            )
+            file_name = file_name[0].decode()
 
             i = i + 1
             samples = samples + np.shape(x)[0]
             total_cost = total_cost + cost
+            print(['test', i, file_name])
 
             if plot:
                 self._plot(x, y, prediction, save = True, id = file_name, dst_dir = plot_dest_dir)
@@ -229,7 +237,8 @@ class Wrapper(object):
                             ))
 
             # one epoch
-            if samples == self.test_dataset_size:
+            if samples == dataset_size:
+                print(['test', samples, dataset_size])
                 break
 
         for key in evaluations:
@@ -322,8 +331,9 @@ class Wrapper(object):
                       .from_tensor_slices((input_files, output_files, gt_files, file_names)) \
                       .map(parse_files) \
                       .batch(bach_size) \
-                      .shuffle(len(input_files)) \
                       .repeat()
+                      #.shuffle(len(input_files)) \
+                      #.repeat()
 
             return len(input_files), dataset
 
@@ -644,8 +654,8 @@ if __name__ == '__main__':
     parser.add_argument('--samples_per_second', type = int, default = 128)
     parser.add_argument('--load', type = str2bool, default = False)
     parser.add_argument('--train', type = str2bool, default = True)
-    parser.add_argument('--epochs', type = int, default = 35)
-    parser.add_argument('--batch_size', type = int, default = 1)
+    parser.add_argument('--epochs', type = int, default = 10)
+    parser.add_argument('--batch_size', type = int, default = 8)
     args = parser.parse_args()
 
     os.environ['CUDA_VISIBLE_DEVICES'] = args.device

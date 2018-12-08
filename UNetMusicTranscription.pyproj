@@ -54,6 +54,9 @@
   <ItemGroup>
     <Content Include=".editorconfig" />
     <Content Include=".gitignore" />
+    <Content Include="conf.ini">
+      <SubType>Code</SubType>
+    </Content>
     <Content Include="data\raw\mirex\basson.mid" />
     <Content Include="data\raw\mirex\basson.wav" />
     <Content Include="data\raw\mirex\clarinet.mid" />
