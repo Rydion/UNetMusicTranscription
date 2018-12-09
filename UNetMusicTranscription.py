@@ -189,7 +189,6 @@ class Wrapper(object):
             i = i + 1
             samples = samples + np.shape(x)[0]
             total_cost = total_cost + cost
-            print(['test', i, file_name])
 
             if plot:
                 self._plot(x, y, prediction, save = True, id = file_name, dst_dir = plot_dest_dir)
