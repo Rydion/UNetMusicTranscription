@@ -25,6 +25,10 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="graph_eval.py" />
+    <Compile Include="graph_cost.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="preprocess.py" />
     <Compile Include="UNetMusicTranscription.py" />
     <Compile Include="unet\Alex_updated_U-net.py" />
@@ -57,6 +61,66 @@
     <Content Include="conf.ini">
       <SubType>Code</SubType>
     </Content>
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-alb_se2_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-alb_se2_ENSTDkCl.wav" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-bk_xmas1_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-bk_xmas1_ENSTDkCl.wav" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-bk_xmas4_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-bk_xmas4_ENSTDkCl.wav" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-bk_xmas5_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-bk_xmas5_ENSTDkCl.wav" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-bor_ps6_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-bor_ps6_ENSTDkCl.wav" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-chpn-e01_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-chpn-e01_ENSTDkCl.wav" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-chpn-p19_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-chpn-p19_ENSTDkCl.wav" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-deb_clai_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-deb_clai_ENSTDkCl.wav" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-deb_menu_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-deb_menu_ENSTDkCl.wav" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-grieg_butterfly_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-grieg_butterfly_ENSTDkCl.wav" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-liz_et6_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-liz_et6_ENSTDkCl.wav" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-liz_et_trans5_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-liz_et_trans5_ENSTDkCl.wav" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-liz_rhap09_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-liz_rhap09_ENSTDkCl.wav" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-mz_311_1_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-mz_311_1_ENSTDkCl.wav" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-mz_331_2_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-mz_331_2_ENSTDkCl.wav" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-mz_331_3_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-mz_331_3_ENSTDkCl.wav" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-mz_332_2_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-mz_332_2_ENSTDkCl.wav" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-mz_333_2_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-mz_333_2_ENSTDkCl.wav" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-mz_333_3_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-mz_333_3_ENSTDkCl.wav" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-mz_545_3_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-mz_545_3_ENSTDkCl.wav" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-mz_570_1_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-mz_570_1_ENSTDkCl.wav" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-pathetique_1_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-pathetique_1_ENSTDkCl.wav" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-schuim-1_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-schuim-1_ENSTDkCl.wav" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-schu_143_3_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-schu_143_3_ENSTDkCl.wav" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-scn15_11_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-scn15_11_ENSTDkCl.wav" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-scn15_12_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-scn15_12_ENSTDkCl.wav" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-scn16_3_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-scn16_3_ENSTDkCl.wav" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-scn16_4_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-scn16_4_ENSTDkCl.wav" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-ty_maerz_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-ty_maerz_ENSTDkCl.wav" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-ty_mai_ENSTDkCl.mid" />
+    <Content Include="data\raw\maps-enstdkcl\MAPS_MUS-ty_mai_ENSTDkCl.wav" />
     <Content Include="data\raw\mirex\basson.mid" />
     <Content Include="data\raw\mirex\basson.wav" />
     <Content Include="data\raw\mirex\clarinet.mid" />
@@ -89,6 +153,19 @@
     <Content Include="data\raw\smd\Bartok_SZ080-02_002_20110315-SMD.wav" />
     <Content Include="data\raw\smd\Bartok_SZ080-03_002_20110315-SMD.mid" />
     <Content Include="data\raw\smd\Bartok_SZ080-03_002_20110315-SMD.wav" />
+    <Content Include="graphs\smd.cqt.dr-16384.sps-128.dm-1.ne-300.bs-128.grid-search\0.pkl" />
+    <Content Include="graphs\smd.cqt.dr-16384.sps-128.dm-1.ne-300.bs-128.grid-search\1.pkl" />
+    <Content Include="graphs\smd.cqt.dr-16384.sps-128.dm-1.ne-300.bs-128.grid-search\10.pkl" />
+    <Content Include="graphs\smd.cqt.dr-16384.sps-128.dm-1.ne-300.bs-128.grid-search\11.pkl" />
+    <Content Include="graphs\smd.cqt.dr-16384.sps-128.dm-1.ne-300.bs-128.grid-search\2.pkl" />
+    <Content Include="graphs\smd.cqt.dr-16384.sps-128.dm-1.ne-300.bs-128.grid-search\3.pkl" />
+    <Content Include="graphs\smd.cqt.dr-16384.sps-128.dm-1.ne-300.bs-128.grid-search\4.pkl" />
+    <Content Include="graphs\smd.cqt.dr-16384.sps-128.dm-1.ne-300.bs-128.grid-search\5.pkl" />
+    <Content Include="graphs\smd.cqt.dr-16384.sps-128.dm-1.ne-300.bs-128.grid-search\6.pkl" />
+    <Content Include="graphs\smd.cqt.dr-16384.sps-128.dm-1.ne-300.bs-128.grid-search\7.pkl" />
+    <Content Include="graphs\smd.cqt.dr-16384.sps-128.dm-1.ne-300.bs-128.grid-search\8.pkl" />
+    <Content Include="graphs\smd.cqt.dr-16384.sps-128.dm-1.ne-300.bs-128.grid-search\9.pkl" />
+    <Content Include="graphs\smd\best_model.pkl" />
     <Content Include="LICENSE" />
     <Content Include="README.md" />
     <Content Include="requirements.txt" />
@@ -97,8 +174,12 @@
     <Folder Include="data\" />
     <Folder Include="data\preprocessed\" />
     <Folder Include="data\raw\" />
+    <Folder Include="data\raw\maps-enstdkcl\" />
     <Folder Include="data\raw\mirex\" />
     <Folder Include="data\raw\smd\" />
+    <Folder Include="graphs\" />
+    <Folder Include="graphs\smd\" />
+    <Folder Include="graphs\smd.cqt.dr-16384.sps-128.dm-1.ne-300.bs-128.grid-search\" />
     <Folder Include="results\" />
     <Folder Include="unet\" />
     <Folder Include="utils\" />
